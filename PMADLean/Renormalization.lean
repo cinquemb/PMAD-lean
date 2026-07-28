@@ -3,7 +3,7 @@ import PMADLean.Dynamics
 import PMADLean.Metrics
 import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
 
-open BigOperators Filter
+open BigOperators Filter Matrix
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
@@ -50,3 +50,14 @@ theorem rg_flow_ir_fixed_point (μ_spectrum : N → ℝ) :
     Tendsto.const_mul (μ_spectrum i ^ 2) h_inv
   simp only [mul_zero] at h_final
   exact h_final
+
+/-- Prove that a uniform scaling of the compliance floor \(\epsilon\) acts as a precise bound 
+    on the emergent space-time compliance metric field profile under absolute decoupling limits. -/
+theorem compliance_floor_bounds_rg_spectrum (ε : ℝ) (h_ε : ε > 0) (i : N) :
+    (EmergentComplianceMetric (0 : Matrix N N ℝ) ε h_ε) i i ≤ ε⁻¹ := by
+  -- 1. Leverage the validated singular-censorship theorem to swap the metric with its floor formulation
+  rw [metric_singularity_censorship ε h_ε]
+  -- 2. Route explicitly through the Matrix namespace to bypass function naming ambiguities
+  rw [Matrix.smul_apply, Matrix.one_apply]
+  -- 3. 🌀 THE REFL FIX: Simplify the true branch down and close the remaining identity reflexivity (ε⁻¹ ≤ ε⁻¹)
+  simp only [if_true, smul_eq_mul, mul_one, le_refl]

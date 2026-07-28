@@ -4,7 +4,7 @@ import PMADLean.Metrics
 import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Algebra.BigOperators.Intervals
 
-open BigOperators Filter
+open BigOperators Filter Matrix
 
 -- Propagate the full decidable index properties to enable tensor operations
 variable {N : Type*} [DecidableEq N] [Fintype N]
@@ -58,3 +58,16 @@ noncomputable def UnifiedMacroscopicSpacetimeMetric
     -- Local tracking coordinate proxy inside the algebraic tensor matrix
     r : ℝ := 1 
 
+/-- Bridge function that synthesizes your micro phase-space dynamics directly into the 
+    macroscopic non-computable Schwarzschild/Kerr spacetime metric parameters. -/
+noncomputable def SynthesizedSpacetimeMetric 
+    (κ : N → N → ℝ) 
+    (ϕ : Trajectory N) 
+    (t : ℝ) 
+    (g_eff : Matrix N N ℝ) : Matrix (Fin 4) (Fin 4) ℝ :=
+  -- Compute the effective mass from the integrated network phase velocity traces
+  let M_phi := ∑ i, ϕ t i
+  -- Compute the total phase angular momentum spin parameter from the vorticity field distribution
+  let a := ∑ i, ∑ j, PhaseVorticityTensor κ ϕ t i j
+  -- Map the parameters directly to initialize the 4x4 coordinate spacetime manifold projection
+  UnifiedMacroscopicSpacetimeMetric M_phi 0 1 1 a 0
