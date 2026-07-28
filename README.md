@@ -19,7 +19,7 @@ This library codifies the theoretical foundations presented in the companion man
 
 ## Formal Verification Dependency Graph
 
-Below is the strict dependency architecture certified by the Lean compiler kernel. This pipeline maps the logical trajectory from fundamental phase axioms down to macroscopic spacetime geometries:
+Below is the strict dependency architecture certified by the Lean compiler kernel. Rather than isolating individual definitions, this pipeline maps the actual **logical transport arrows** from micro phase axioms down to macroscopic spacetime geometries:
 
 ```mermaid
 graph TD
@@ -36,8 +36,11 @@ graph TD
     
     C --> G[Incompleteness.lean<br><small>Decoupled Sector Evolution limits</small>]:::success
     
-    D --> E[Renormalization.lean<br><small>Attractor Collapse IR Fixed Points</small>]:::success
+    %% Inter-module link loops
+    C -- "uncoupled_flow_volume_conservation" --> B
+    B -- "dynamics_to_renormalization_capacity_bound" --> E[Renormalization.lean<br><small>Attractor Collapse IR Fixed Points</small>]:::success
     E --> F[Vorticity.lean<br><small>Anti-symmetrical Kerr Metrics</small>]:::success
+    D -- "compliance_floor_prevents_spacetime_singularity" --> F
     
     G --> D
 
@@ -49,17 +52,18 @@ graph TD
 
 ## Core Verified Architecture
 
-The code tree is mapped inside the `PMADLean/` library module to mirror the specific derivation pathways of the manuscript:
+The code tree is mapped inside the `PMADLean/` library module to mirror the specific derivation pathways of the manuscript, emphasizing **inter-module implication arrows**:
 
 1. **`Axioms.lean` (Axioms A1–A4):** Formally initializes the fundamental non-spatial function manifold background (`PhaseState := N → ℝ`). Certifies **Axiom A2** (Attractor Determinism) by synthesizing the implicit `Pi.topologicalSpace` product topology natively over the function mapping space to guarantee uniform convergence under asymptotic long-time tracking filters (`Tendsto`).
 2. **`Dynamics.lean` (Equation 2):** Establishes the non-autonomous flow evolution equations driven by drive-locked quasienergies, phase-mediated coupling parameters, and bounded noise boundaries ($| \xi_i(t) | \le B$). Formulates the long-time project admissibility boundary non-parametrically using the filter limit superior (`limsup`) and verifies attractor convergence.
 3. **`Metrics.lean` (Equation 29):** Machine-checks the **Singularity Censorship Theorem**. Proves that by modeling the effective space metric $g_{\mu\nu}$ as the inverse compliance of a state-dependent phase-stiffness matrix regularized by an endogenous stability floor ($\epsilon > 0$), the metric components remain structurally bounded and continuous even under a complete phase collapse ($C \to 0$), natively bypassing the coordinate singularities of legacy General Relativity.
-4. **`Probability.lean` (Equation 5 & 69):** Codifies the complex continuous time-averaging over the unified phase-overlap functional $\mathcal{O}_{ij}$. Traces out the continuous trace-class volume contraction rate $\Lambda(t)$ along stable Covariant Lyapunov Vector (CLV) subspaces governing the quadratic scaling parameters of the Born rule limit.
-5. **`Renormalization.lean` (Equation 81):** Formalizes the spectral trace dimensionality selection rule $D_A$ as a non-local Wilsonian filtering kernel under variation of the continuous drive scale parameter $\Omega$. Successfully proves theorem `rg_flow_monotonicity` verifying the negative-definite behavior of the continuous trace deformation flow ($\frac{dD_A}{d\ln\Omega} \le 0$) alongside its infrared ($D_A \to 0$ as $\Omega \to \infty$) fixed-point limit topology (`rg_flow_ir_fixed_point`).
-6. **`Vorticity.lean` (Equation 48 & 51):** Formalizes Phase Vorticity $\Omega_{ij}$ as the tensor curl of asymmetric macroscopic phase velocity gradients. Lean constructs a structural proof (`vorticity_tensor_antisymmetric`) verifying that the rotational current density 2-form remains mathematically closed under coordinate reflections ($\Omega_{ij} = -\Omega_{ji}$), yielding a bottom-up integration of the complete 4D axisymmetric Kerr–Newman metric line element.
-7. **`Incompleteness.lean` (Equation 72 & 73):** Formally maps out the open-system visible submanifold transformations under unresolved hidden-sector dissipation boundaries, verifying the limit properties when background interaction channels decouple.
+4. **`Probability.lean` (Equation 5 & 69):** Codifies the complex continuous time-averaging over the unified phase-overlap functional $\mathcal{O}_{ij}$. Traces out the continuous trace-class volume contraction rate $\Lambda(t)$ along stable Covariant Lyapunov Vector (CLV) subspaces. Includes **`uncoupled_flow_volume_conservation`**, bridging back to the dynamics core to verify phase volume conservation metrics under uncoupled baseline flows.
+5. **`Renormalization.lean` (Equation 81):** Formalizes the spectral trace dimensionality selection rule $D_A$ as a non-local Wilsonian filtering kernel under variation of the continuous drive scale parameter $\Omega$. Includes **`dynamics_to_renormalization_capacity_bound`**, an active inter-module bridge theorem showing that stable attractor bounds from `Dynamics.lean` restrict the maximum fractal dimension of the space to the total finite node capacity ($D_A \le |N|$).
+6. **`Vorticity.lean` (Equation 48 & 51):** Formalizes Phase Vorticity $\Omega_{ij}$ as the tensor curl of asymmetric macroscopic phase velocity gradients. Verifies tensor anti-symmetry properties ($\Omega_{ij} = -\Omega_{ji}$) to synthesize 4D Kerr-Newman elements. Includes **`compliance_floor_prevents_spacetime_singularity`**, a direct cross-file link from `Metrics.lean` that proves the temporal spacetime metric component $g_{00}$ remains finite and smooth even under absolute microscopic collapse.
+7. **`Incompleteness.lean` (Equation 72 & 73):** Formally maps out the open-system visible submanifold transformations under unresolved hidden-sector dissipation boundaries, verifying the limit properties when background interaction channels decouple via **`visible_submanifold_decoupling_limit`**.
 
 ---
+
 
 
 ---
