@@ -51,7 +51,7 @@ theorem overlap_limit_of_matched_noiseless_flow
   rw [h_collapse, norm_one]
 
 omit [DecidableEq N] in
-/-- 🌌 THE INTER-MODULE TRANSPORT ARROW (Probability ⟶ Dynamics)
+/-- THE INTER-MODULE TRANSPORT ARROW (Probability ⟶ Dynamics)
     Proves that for an isolated system with fully decoupled microscopic interaction channels 
     (κ → 0), the continuous phase-space volume contraction rate Λ collapse identically to zero, 
     verifying phase volume conservation metrics under uncoupled baseline dynamics. -/

@@ -1,6 +1,7 @@
 import PMADLean.Axioms
 import PMADLean.Dynamics
 import PMADLean.Metrics
+import PMADLean.Probability
 import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Algebra.BigOperators.Intervals
 
@@ -67,10 +68,34 @@ theorem compliance_floor_prevents_spacetime_singularity
   simp only [UnifiedMacroscopicSpacetimeMetric, UnifiedMacroscopicSpacetimeMetric.r, mul_one, div_one, neg_sub, ne_eq, one_ne_zero, not_false_eq_true, div_self, one_pow, Fin.isValue, of_apply, cons_val', cons_val_zero, cons_val_fin_one]
   -- Decompose the absolute value into two real inequalities using abs_le
   rw [abs_le]
-  -- 🌀 THE LOGICAL FIX: Call the exact upper and lower bound lemmas tracking M_phi from your mathlib search
+  -- THE LOGICAL FIX: Call the exact upper and lower bound lemmas tracking M_phi from your mathlib search
   have hM1 := le_abs_self M_phi
   have hM2 := neg_le_abs M_phi
   -- Close both inequalities simultaneously using linear ordering and squaring invariants
   constructor
   · linarith [sq_nonneg Q_phi]
   · linarith [sq_nonneg Q_phi]
+
+/-- Definition: A workflow mapping is a valid PMAD Transport Arrow from module A to module B 
+    if a verified physical boundary condition in module A logically enforces the 
+    regularity bounds of module B. -/
+def TransportArrow (A : Prop) (B : Prop) : Prop := A → B
+
+omit [DecidableEq N] [Fintype N] in
+/-- Composition of Transport Arrows.
+    Categorical pipeline validation. Proves that if a valid physical transport link exists 
+    from Probability to Metrics, and another exists from Metrics to Spacetime, they compose 
+    transitively to guarantee a direct, regular transport flow from Probability to Spacetime. -/
+theorem transport_arrow_composition
+    {Probability_Bound Dynamics_Bound Spacetime_Bound : Prop}
+    (h_prob_to_metrics : TransportArrow Probability_Bound Dynamics_Bound)
+    (h_metrics_to_spacetime : TransportArrow Dynamics_Bound Spacetime_Bound) :
+    TransportArrow Probability_Bound Spacetime_Bound := by
+  -- Unfold our categorical framework wrapper representation
+  unfold TransportArrow at h_prob_to_metrics h_metrics_to_spacetime ⊢
+  -- 1. Introduce the baseline constraint from your Probability criteria 
+  intro h_prob
+  -- 2. Pass it down to the intermediate Dynamics/Metrics stage 
+  have h_dyn := h_prob_to_metrics h_prob
+  -- 3. Transport it directly to seal the ultimate Spacetime Metric regularity goal
+  exact h_metrics_to_spacetime h_dyn
