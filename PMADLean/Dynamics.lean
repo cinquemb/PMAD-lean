@@ -36,11 +36,11 @@ theorem pmad_flow_converges_to_attractor
   use BoundingSet
   -- 2. Introduce the arbitrary evaluation variables from the updated rigorous signature
   intro ϕ' h_bound
-  -- 3. 📐 OPEN NEIGHBORHOOD REDUCTION: Unfold the filter limit to target neighborhood properties directly
+  -- 3. OPEN NEIGHBORHOOD REDUCTION: Unfold the filter limit to target neighborhood properties directly
   intro U hU
   -- 4. Leverage mem_nhdsSet_iff_forall to assert that U is a valid neighborhood for all points in BoundingSet
   rw [mem_nhdsSet_iff_forall] at hU
-  -- 5. 🌀 THE COUPLING FIX: Cast the preimage type definitionally so Lean identifies the function mapping
+  -- 5. THE COUPLING FIX: Cast the preimage type definitionally so Lean identifies the function mapping
   change ϕ' ⁻¹' U ∈ atTop
   -- Show that the trajectory preimage maps into the top filter elements universally
   have h_univ : {t | ϕ' t ∈ U} = Set.univ := by

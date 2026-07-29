@@ -45,9 +45,9 @@ theorem overlap_limit_of_matched_noiseless_flow
   rw [intervalIntegral.integral_const, sub_zero]
   have h_collapse : (1 / T) • T • (1 : ℂ) = 1 := by
     apply Complex.ext
-    · simp
+    · simp only [one_div, real_smul, mul_one, ofReal_inv, mul_re, inv_re, ofReal_re, normSq_ofReal, div_self_mul_self', inv_im, ofReal_im, neg_zero, zero_div, mul_zero, sub_zero, one_re]
       exact inv_mul_cancel₀ (ne_of_gt hT)
-    · simp
+    · simp only [one_div, real_smul, mul_one, ofReal_inv, mul_im, inv_re, ofReal_re, normSq_ofReal, div_self_mul_self', ofReal_im, mul_zero, inv_im, neg_zero, zero_div, zero_mul, add_zero, one_im]
   rw [h_collapse, norm_one]
 
 omit [DecidableEq N] in

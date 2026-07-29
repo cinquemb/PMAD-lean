@@ -19,7 +19,7 @@ omit [DecidableEq N] in
 /-- Theorem: Verification that the Attractor Dimensionality flow is strictly monotonic. -/
 theorem rg_flow_monotonicity (μ_spectrum : N → ℝ) (Ω : ℝ) (_h_Ω : Ω > 0) :
     AttractorDimensionalityRGFlow μ_spectrum Ω ≤ 0 := by
-  simp [AttractorDimensionalityRGFlow]
+  simp only [AttractorDimensionalityRGFlow, Left.neg_nonpos_iff]
   apply Finset.sum_nonneg
   intro i _
   have h_num : 0 ≤ (2 * μ_spectrum i ^ 2 * Ω ^ 2) / (μ_spectrum i ^ 2 + Ω ^ 2) ^ 2 := by
@@ -33,7 +33,7 @@ omit [DecidableEq N] in
 theorem rg_flow_ir_fixed_point (μ_spectrum : N → ℝ) :
     Tendsto (AttractorDimensionality μ_spectrum) atTop (nhds 0) := by
   unfold AttractorDimensionality
-  have h_zero : (0 : ℝ) = ∑ _i : N, 0 := by simp
+  have h_zero : (0 : ℝ) = ∑ _i : N, 0 := by simp only [Finset.sum_const_zero]
   rw [h_zero]
   apply tendsto_finsetSum
   intro i _
@@ -69,7 +69,7 @@ theorem dynamics_to_renormalization_capacity_bound
   -- 1. Unfold the spectral dimensionality tracking profile to reveal the internal summation network
   unfold AttractorDimensionality
   -- 2. Transform the capacity index from a static card constant to a unified summation over elements
-  have h_card_sum : (Fintype.card N : ℝ) = ∑ _i : N, 1 := by simp
+  have h_card_sum : (Fintype.card N : ℝ) = ∑ _i : N, 1 := by simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one]
   rw [h_card_sum]
   -- 3. Distribute the inequality bounds coordinate-by-coordinate across the Finset index mapper
   apply Finset.sum_le_sum
@@ -84,5 +84,5 @@ theorem dynamics_to_renormalization_capacity_bound
     · -- If the path is regular, cross-multiply coordinates safely
       apply (div_le_one (lt_of_le_of_ne (add_nonneg (sq_nonneg (μ_spectrum i)) (sq_nonneg Ω)) (Ne.symm h_zero))).mpr
       -- Cancel out the shared squared spectrum nodes (μ^2 ≤ μ^2 + Ω^2 reduces to 0 ≤ Ω^2)
-      simp [le_add_of_nonneg_right (sq_nonneg Ω)]
+      simp only [le_add_of_nonneg_right (sq_nonneg Ω)]
   exact h_fraction_le

@@ -30,7 +30,7 @@ omit [DecidableEq N] [Fintype N] in
 /-- Theorem: Spatial Locality Collapse Boundary. -/
 theorem spatial_locality_collapse (κ : N → N → ℝ) (R : N → N → ℝ) (i j : N)
     (h_collapse : R i j = 0) : DynamicSpatialAdjacency κ R i j = 0 := by
-  simp [DynamicSpatialAdjacency, h_collapse]
+  simp only [DynamicSpatialAdjacency, h_collapse, mul_zero]
 
 /-- Theorem: Singularity Censorship via the Compliance Floor (Eq. 29).
     Proves that if the state-dependent phase stiffness matrix C experiences complete 
@@ -74,7 +74,7 @@ theorem stiffness_from_overlap_functional
   -- Decompose the real part of the scalar integral tracking block
   have h_re_one : ((1 / T) • T • (1 : ℂ)).re = 1 := by
     -- Simplify the real projection structures natively
-    simp
+    simp only [one_div, real_smul, mul_one, ofReal_inv, mul_re, inv_re, ofReal_re, normSq_ofReal, div_self_mul_self', inv_im, ofReal_im, neg_zero, zero_div, mul_zero, sub_zero]
     -- Explicitly cancel out the inverted field elements (T⁻¹ * T = 1) using the horizon positivity parameter
     exact inv_mul_cancel₀ (ne_of_gt hT)
   rw [h_re_one]

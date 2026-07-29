@@ -25,7 +25,7 @@ omit [DecidableEq N] [Fintype N] in
 /-- Lemma: Structural Proof of Anti-Symmetry for the Phase Vorticity Tensor. -/
 theorem vorticity_tensor_antisymmetric (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (i j : N) :
     PhaseVorticityTensor κ ϕ t i j = -PhaseVorticityTensor κ ϕ t j i := by
-  simp [PhaseVorticityTensor]
+  simp only [PhaseVorticityTensor, neg_sub]
 
 /-- Section XII-G (Eq. 49): The Local Frame Dragging Coupling Vector (ω_drift). -/
 noncomputable def LocalFrameDraggingVector (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (g_eff : Matrix N N ℝ) (i : N) : ℝ :=
@@ -64,7 +64,7 @@ theorem compliance_floor_prevents_spacetime_singularity
 
     |(UnifiedMacroscopicSpacetimeMetric M_phi Q_phi 1 1 a theta) 0 0| ≤ 1 + 2 * |M_phi| + Q_phi ^ 2 := by
   -- Unfold the local tracking coordinate proxy 'r' inside the matrix definition
-  simp [UnifiedMacroscopicSpacetimeMetric, UnifiedMacroscopicSpacetimeMetric.r]
+  simp only [UnifiedMacroscopicSpacetimeMetric, UnifiedMacroscopicSpacetimeMetric.r, mul_one, div_one, neg_sub, ne_eq, one_ne_zero, not_false_eq_true, div_self, one_pow, Fin.isValue, of_apply, cons_val', cons_val_zero, cons_val_fin_one]
   -- Decompose the absolute value into two real inequalities using abs_le
   rw [abs_le]
   -- 🌀 THE LOGICAL FIX: Call the exact upper and lower bound lemmas tracking M_phi from your mathlib search
