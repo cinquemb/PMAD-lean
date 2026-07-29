@@ -252,5 +252,51 @@ theorem compliance_floor_divergence_bounds (α : ℝ) (hα : 0 < α) (M : ℝ) (
   rw [le_div_iff₀ h_sin_pos]
   linarith
 
+omit [DecidableEq N] [Fintype N] in
+/-- Coordinate independence via index permutation.
+    Proves that the macroscopic Phase Velocity Gradient observable is perfectly invariant 
+    under relabeling of indices via an arbitrary Fintype permutation bijection (σ). -/
+theorem coordinate_independence
+    (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (σ : Equiv.Perm N) (i j : N) :
+    LocalPhaseVelocityGradient (fun a b => κ (σ a) (σ b)) (fun t' k => ϕ t' (σ k)) t i j =
+    LocalPhaseVelocityGradient κ ϕ t (σ i) (σ j) := by
+  unfold LocalPhaseVelocityGradient
+  -- The permutation evaluation matches out definitionally across the functional mapping
+  rfl
 
+
+/-- Compliance metric positivity.
+    Proves that if the state-dependent phase stiffness matrix is positive semidefinite 
+    (represented here via non-negative diagonal elements d), the diagonal elements of the 
+    regularized emergent compliance metric tensor remain strictly positive for all ε > 0. -/
+theorem compliance_metric_positivity 
+    (ε : ℝ) (h_ε : ε > 0) (d : N → ℝ) (hd : ∀ i, 0 ≤ d i) :
+    ∀ i, 0 < ((diagonal (fun j => d j + ε))⁻¹ : Matrix N N ℝ) i i := by
+  intro i
+  -- 1. Explicitly expand the target expression matrix sum structure
+  have h_sum : (diagonal d + ε • (1 : Matrix N N ℝ)) = diagonal (fun j => d j + ε) := by
+    ext j k
+    by_cases h_jk : j = k
+    · subst h_jk
+      simp only [Matrix.add_apply, diagonal_apply_eq, Matrix.smul_apply, one_apply_eq, smul_eq_mul, mul_one]
+    · simp only [Matrix.add_apply, diagonal_apply_ne _ h_jk, Matrix.smul_apply, one_apply_ne h_jk, smul_eq_mul, mul_zero, add_zero]
+  
+  -- 2. Compute the exact matrix inverse using your established diagonal inversion technique
+  have h_inv : (diagonal (fun j => d j + ε))⁻¹ = diagonal (fun j => (d j + ε)⁻¹) := by
+    apply Matrix.inv_eq_left_inv
+    rw [diagonal_mul_diagonal]
+    have h_one : (fun j => (d j + ε)⁻¹ * (d j + ε)) = (fun _ => 1) := by
+      ext j
+      apply inv_mul_cancel₀
+      linarith [hd j]
+    rw [h_one, diagonal_one]
+  
+  -- Use change to cleanly let Lean's elaborator unify the goal shape before rewriting
+  change 0 < ((diagonal (fun j => d j + ε))⁻¹) i i
+  rw [h_inv]
+  rw [diagonal_apply_eq]
+  
+  -- 3. Deduce that the inverted sum is strictly positive using real field arithmetic
+  have h_denom_pos : 0 < d i + ε := by linarith [hd i]
+  exact inv_pos.mpr h_denom_pos
 

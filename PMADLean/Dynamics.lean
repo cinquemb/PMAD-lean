@@ -1,5 +1,8 @@
 import PMADLean.Axioms
 import Mathlib.Analysis.Calculus.Deriv.Basic
+import Mathlib.Analysis.Calculus.Deriv.Shift
+import Mathlib.Analysis.Calculus.Deriv.Add
+
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 import Mathlib.Topology.NhdsSet
 
@@ -57,3 +60,28 @@ theorem pmad_flow_converges_to_attractor
   change {t | ϕ' t ∈ U} ∈ atTop
   rw [h_univ]
   exact Filter.univ_mem
+
+omit [DecidableEq N] in
+/-- Invariance under global phase shift.
+    Proves that shifting all trajectories uniformly by an arbitrary real constant scalar c
+    leaves the structural differential flow of the PMAD Phase Evolution system (Eq. 2) 
+    identically invariant. -/
+theorem global_phase_gauge_invariance 
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
+    (h_flow : IsPmadFlow ϕ ω κ ξ B) (c : ℝ) :
+    IsPmadFlow (fun t i => ϕ t i + c) ω κ ξ B := by
+  -- Unfold the flow definition to unpack the structural parts
+  unfold IsPmadFlow at h_flow ⊢
+  rcases h_flow with ⟨h_noise, h_deriv⟩
+  refine ⟨h_noise, ?_⟩
+  intro t i
+  -- 1. Isolate the inner phase difference algebra via ring cancellations
+  have h_diff : ∀ j, (ϕ t j + c) - (ϕ t i + c) = ϕ t j - ϕ t i := by
+    intro j; ring
+  -- 2. Substitute the cancelled translation offsets directly into the big sum
+  simp_rw [h_diff]
+  -- 3. Construct the sum derivative inline using fundamental rules from Deriv.Basic
+  have h_const := hasDerivAt_const t c
+  have h_add := HasDerivAt.add (h_deriv t i) h_const
+  rw [add_zero] at h_add
+  exact h_add
