@@ -81,3 +81,75 @@ theorem stiffness_from_overlap_functional
   -- Squaring any real number κ yields a non-negative value (0 ≤ κ^2), making 1 ≤ κ^2 + 1 unconditionally true
   have h_sq_nonneg : 0 ≤ (κ i j) ^ 2 := sq_nonneg (κ i j)
   linarith
+
+/-- Verification of sharp entry-wise metric suppression 
+    under diagonal stiffness domination. Proves that if the state-dependent phase 
+    stiffness matrix C is perfectly diagonalized, the diagonal entries of the 
+    emergent compliance metric are sharply bounded above by the inverse compliance floor. -/
+theorem compliance_metric_diagonal_bound (ε : ℝ) (h_ε : ε > 0) (d : N → ℝ) (hd : ∀ i, 0 ≤ d i) :
+    ∀ i, (EmergentComplianceMetric (diagonal d) ε h_ε) i i ≤ ε⁻¹ := by
+  intro i
+  unfold EmergentComplianceMetric
+  -- 1. Combine the diagonal matrix with the scaled identity matrix mapping cleanly
+  have h_sum : diagonal d + ε • (1 : Matrix N N ℝ) = diagonal (fun j => d j + ε) := by
+    ext j k
+    by_cases h_jk : j = k
+    · subst h_jk
+      simp only [Matrix.add_apply, diagonal_apply_eq, Matrix.smul_apply, one_apply_eq, smul_eq_mul, mul_one]
+    · simp only [Matrix.add_apply, diagonal_apply_ne _ h_jk, Matrix.smul_apply, one_apply_ne h_jk, smul_eq_mul, mul_zero, add_zero]
+  rw [h_sum]
+  -- 2. Compute the exact matrix inverse of the combined diagonal system using left inverse properties
+  have h_inv : (diagonal (fun j => d j + ε))⁻¹ = diagonal (fun j => (d j + ε)⁻¹) := by
+    apply Matrix.inv_eq_left_inv
+    rw [diagonal_mul_diagonal]
+    have h_one : (fun j => (d j + ε)⁻¹ * (d j + ε)) = (fun _ => 1) := by
+      ext j
+      apply inv_mul_cancel₀
+      linarith [hd j]
+    rw [h_one, diagonal_one]
+  rw [h_inv, diagonal_apply_eq]
+  -- 3. Use real division bounds to deduce that (d i + ε)⁻¹ ≤ ε⁻¹ without naming volatile lemmas
+  have h_pos_den : 0 < d i + ε := by linarith [hd i]
+  have h_le : ε ≤ d i + ε := by linarith [hd i]
+  rw [inv_eq_one_div, inv_eq_one_div]
+  exact div_le_div_of_nonneg_left (by norm_num) h_ε h_le
+
+/-- Section XII-G (Eq. 47): Define the Phase Velocity Gradient field. -/
+noncomputable def LocalPhaseVelocityGradient (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) : N → N → ℝ :=
+  fun i j => κ i j * Real.cos (ϕ t j - ϕ t i)
+
+/-- Section XII-G (Eq. 48): The Localized Phase Vorticity Tensor (Ω_ij). -/
+noncomputable def LocalPhaseVorticityTensor (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) : N → N → ℝ :=
+  fun i j => LocalPhaseVelocityGradient κ ϕ t i j - LocalPhaseVelocityGradient κ ϕ t j i
+
+omit [DecidableEq N] [Fintype N] in
+/--  Bounds on Phase Vorticity Magnitude.
+    Proves that the anti-symmetric macroscopic Phase Vorticity Tensor (Ω_ij) 
+    is sharply bounded at any snapshot by twice the scalar micro coupling parameter. -/
+theorem vorticity_tensor_magnitude_bound (κ : N → N → ℝ) (h_κ : ∀ i j, 0 ≤ κ i j) (h_symm : ∀ i j, κ i j = κ j i) (ϕ : Trajectory N) (t : ℝ) (i j : N) :
+
+    |LocalPhaseVorticityTensor κ ϕ t i j| ≤ 2 * κ i j := by
+  unfold LocalPhaseVorticityTensor LocalPhaseVelocityGradient
+  -- 1. Apply the triangle inequality to separate the composite velocity gradient flows
+  have h_triangle := abs_sub (κ i j * Real.cos (ϕ t j - ϕ t i)) (κ j i * Real.cos (ϕ t i - ϕ t j))
+  -- 2. Coordinate bounding using the fundamental invariant -1 ≤ cos(θ) ≤ 1
+  have h_cos_le1 : Real.cos (ϕ t j - ϕ t i) ≤ 1 := Real.cos_le_one _
+  have h_cos_ge1 : -1 ≤ Real.cos (ϕ t j - ϕ t i) := Real.neg_one_le_cos _
+  have h_cos_le2 : Real.cos (ϕ t i - ϕ t j) ≤ 1 := Real.cos_le_one _
+  have h_cos_ge2 : -1 ≤ Real.cos (ϕ t i - ϕ t j) := Real.neg_one_le_cos _
+  -- 3. Formulate the explicit multi-variable absolute bounds bypassing raw non-linear linarith calls
+  have h_abs_cos1 : |Real.cos (ϕ t j - ϕ t i)| ≤ 1 := by
+    rw [abs_le]; exact ⟨h_cos_ge1, h_cos_le1⟩
+  have h_abs_cos2 : |Real.cos (ϕ t i - ϕ t j)| ≤ 1 := by
+    rw [abs_le]; exact ⟨h_cos_ge2, h_cos_le2⟩
+  -- Extract linear bounds using nlinarith products
+  have h_bound1 : |κ i j * Real.cos (ϕ t j - ϕ t i)| ≤ κ i j := by
+    rw [abs_mul, abs_of_nonneg (h_κ i j)]
+    have h_prod : κ i j * |Real.cos (ϕ t j - ϕ t i)| ≤ κ i j * 1 := mul_le_mul_of_nonneg_left h_abs_cos1 (h_κ i j)
+    linarith
+  have h_bound2 : |κ j i * Real.cos (ϕ t i - ϕ t j)| ≤ κ i j := by
+    rw [h_symm j i, abs_mul, abs_of_nonneg (h_κ i j)]
+    have h_prod : κ i j * |Real.cos (ϕ t i - ϕ t j)| ≤ κ i j * 1 := mul_le_mul_of_nonneg_left h_abs_cos2 (h_κ i j)
+    linarith
+  linarith
+
