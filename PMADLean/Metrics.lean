@@ -153,3 +153,37 @@ theorem vorticity_tensor_magnitude_bound (κ : N → N → ℝ) (h_κ : ∀ i j,
     linarith
   linarith
 
+omit [DecidableEq N] [Fintype N] in
+/-- Global Translational Invariance of the Vorticity Tensor.
+    Proves that shifting all absolute coordinates uniformly by an arbitrary 
+    real translation factor (ϕ ↦ ϕ + c) leaves the structural Phase Vorticity Tensor 
+    identically invariant across all snapshots. -/
+theorem vorticity_tensor_translational_invariance
+    (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (i j : N) (c : ℝ) :
+    LocalPhaseVorticityTensor κ (fun t' k => ϕ t' k + c) t i j = LocalPhaseVorticityTensor κ ϕ t i j := by
+  unfold LocalPhaseVorticityTensor LocalPhaseVelocityGradient
+  -- 1. Isolate the internal coordinate subtraction loops cleanly via ring axioms
+  have h_trans1 : (ϕ t j + c) - (ϕ t i + c) = ϕ t j - ϕ t i := by ring
+  have h_trans2 : (ϕ t i + c) - (ϕ t j + c) = ϕ t i - ϕ t j := by ring
+  -- 2. Substitute the cancelled translation offsets back into the gradient fields
+  rw [h_trans1, h_trans2]
+
+omit [DecidableEq N] [Fintype N] in
+/-- Discrete Gauge Invariance of the Vorticity Tensor.
+    Proves that shifting any absolute tracking phase by an integer multiple of 2π 
+    (ϕ ↦ ϕ + 2πk) acts as an exact identity operator, leaving all observable 
+    velocity metrics perfectly unchanged. -/
+theorem vorticity_tensor_gauge_invariance
+    (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (i j : N) (k : ℤ) :
+    LocalPhaseVorticityTensor κ (fun t' x => ϕ t' x + 2 * Real.pi * k) t i j = LocalPhaseVorticityTensor κ ϕ t i j := by
+  unfold LocalPhaseVorticityTensor LocalPhaseVelocityGradient
+  -- 1. Eliminate the inner trigonometric calculus loops entirely using congrArg
+  have h_gauge1 : Real.cos (ϕ t j + 2 * Real.pi * (k : ℝ) - (ϕ t i + 2 * Real.pi * (k : ℝ))) = Real.cos (ϕ t j - ϕ t i) := by
+    apply congrArg Real.cos
+    -- The 2 * Real.pi * k blocks cancel out strictly via structural linear arithmetic
+    linarith
+  have h_gauge2 : Real.cos (ϕ t i + 2 * Real.pi * (k : ℝ) - (ϕ t j + 2 * Real.pi * (k : ℝ))) = Real.cos (ϕ t i - ϕ t j) := by
+    apply congrArg Real.cos
+    linarith
+  -- 2. Substitute the evaluated identities back into the matrix tensor
+  rw [h_gauge1, h_gauge2]
