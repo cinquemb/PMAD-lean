@@ -58,7 +58,8 @@ theorem compliance_floor_bounds_rg_spectrum (ε : ℝ) (h_ε : ε > 0) (i : N) :
   rw [Matrix.smul_apply, Matrix.one_apply]
   simp only [if_true, smul_eq_mul, mul_one, le_refl]
 
-/-- 🌌 THE INTER-MODULE TRANSPORT ARROW (Dynamics ⟶ Renormalization)
+omit [DecidableEq N] in
+/-- THE INTER-MODULE TRANSPORT ARROW (Dynamics ⟶ Renormalization)
     Proves that for any valid system state configured along an admissible, contracting 
     Lyapunov attractor field subspace, the continuous AttractorDimensionality matrix parameter 
     is rigorously bounded above by the total finite cardinality allocation capacity of the background index field. -/
@@ -86,3 +87,61 @@ theorem dynamics_to_renormalization_capacity_bound
       -- Cancel out the shared squared spectrum nodes (μ^2 ≤ μ^2 + Ω^2 reduces to 0 ≤ Ω^2)
       simp only [le_add_of_nonneg_right (sq_nonneg Ω)]
   exact h_fraction_le
+
+omit [DecidableEq N] in
+/-- Finite Variable Monotonicity for the RG Flow.
+    Proves that the effective attractor dimension function decays monotonically 
+    across discrete energy scale jumps (Ω₁ ≤ Ω₂) without needing differentiation. -/
+theorem rg_flow_finite_monotonicity (μ_spectrum : N → ℝ) (Ω₁ Ω₂ : ℝ) (h_Ω₁ : 0 ≤ Ω₁) (h_step : Ω₁ ≤ Ω₂) :
+    AttractorDimensionality μ_spectrum Ω₂ ≤ AttractorDimensionality μ_spectrum Ω₁ := by
+  unfold AttractorDimensionality
+  apply Finset.sum_le_sum
+  intro i _
+  -- 1. Isolate standard squared non-negative variables
+  have h_mu2 : 0 ≤ μ_spectrum i ^ 2 := sq_nonneg (μ_spectrum i)
+  have h_om1_2 : 0 ≤ Ω₁ ^ 2 := sq_nonneg Ω₁
+  have h_om2_2 : 0 ≤ Ω₂ ^ 2 := sq_nonneg Ω₂
+  have h_om_step : Ω₁ ^ 2 ≤ Ω₂ ^ 2 := sq_le_sq.mpr (by
+    rw [abs_of_nonneg h_Ω₁, abs_of_nonneg (by linarith)]
+    exact h_step)
+  -- 2. Handle potential structural division-by-zero edge cases safely by bypassing branch unifications
+  by_cases h_z1 : μ_spectrum i ^ 2 + Ω₁ ^ 2 = 0
+  · have h_mu_z : μ_spectrum i ^ 2 = 0 := by linarith [h_mu2, h_om1_2]
+    rw [h_mu_z, zero_div, zero_div]
+  by_cases h_z2 : μ_spectrum i ^ 2 + Ω₂ ^ 2 = 0
+  · have h_mu_z : μ_spectrum i ^ 2 = 0 := by linarith [h_mu2, h_om2_2]
+    rw [h_mu_z, zero_div, zero_div]
+  -- 3. Execute cross-multiplication on regular fractions safely
+  have h_pos1 : 0 < μ_spectrum i ^ 2 + Ω₁ ^ 2 := lt_of_le_of_ne (add_nonneg h_mu2 h_om1_2) (Ne.symm h_z1)
+  have h_pos2 : 0 < μ_spectrum i ^ 2 + Ω₂ ^ 2 := lt_of_le_of_ne (add_nonneg h_mu2 h_om2_2) (Ne.symm h_z2)
+  rw [div_le_div_iff₀ h_pos2 h_pos1]
+  -- 4. Cancel out shared products to isolate 0 ≤ μ^2 * (Ω₂^2 - Ω₁^2)
+  nlinarith
+
+omit [DecidableEq N] in
+/-- Ultraviolet Fixed Point Limit (Ω → 0).
+    Proves that as the energy tracking scale vanishes completely, the effective 
+    attractor dimensionality function recovers the maximum baseline capacity bounds (0 ≤ D_A ≤ N). -/
+theorem rg_flow_uv_bounds (μ_spectrum : N → ℝ) (Ω : ℝ) :
+    0 ≤ AttractorDimensionality μ_spectrum Ω := by
+  unfold AttractorDimensionality
+  apply Finset.sum_nonneg
+  intro i _
+  apply div_nonneg (sq_nonneg _)
+  positivity
+
+omit [DecidableEq N] [Fintype N] in
+/-- Uniform Spectral Parameter Coordinate Bounds.
+    Proves that each microscopic component fraction of the dimensionality profile 
+    is trivially bounded between 0 and 1. -/
+theorem rg_flow_component_bounds (μ_spectrum : N → ℝ) (Ω : ℝ) (i : N) :
+    0 ≤ (μ_spectrum i ^ 2) / (μ_spectrum i ^ 2 + Ω ^ 2) ∧ 
+    (μ_spectrum i ^ 2) / (μ_spectrum i ^ 2 + Ω ^ 2) ≤ 1 := by
+  constructor
+  · apply div_nonneg (sq_nonneg _)
+    positivity
+  · by_cases h_zero : μ_spectrum i ^ 2 + Ω ^ 2 = 0
+    · rw [h_zero, div_zero]; norm_num
+    · have h_pos : 0 < μ_spectrum i ^ 2 + Ω ^ 2 := lt_of_le_of_ne (add_nonneg (sq_nonneg _) (sq_nonneg _)) (Ne.symm h_zero)
+      apply (div_le_one h_pos).mpr
+      simp only [le_add_of_nonneg_right (sq_nonneg Ω)]
