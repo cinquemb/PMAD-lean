@@ -187,3 +187,70 @@ theorem vorticity_tensor_gauge_invariance
     linarith
   -- 2. Substitute the evaluated identities back into the matrix tensor
   rw [h_gauge1, h_gauge2]
+
+
+/-- Section XIV-G: The Endogenized Dynamic Compliance Floor Function.
+    Transitions ε from a static parameter into a state-dependent physical field 
+    driven by the Covariant Lyapunov Vector (CLV) hyper-angle (θ). -/
+noncomputable def ComplianceFloor (α : ℝ) (θ : ℝ) : ℝ :=
+  α * (Real.cos θ / Real.sin θ)
+
+omit [DecidableEq N] [Fintype N] in
+/-- Monotonicity of the Compliance Floor.
+    Proves that as the stable and unstable dynamical pathways collapse together 
+    (θ₁ < θ₂), the compliance floor strictly spikes (ε(θ₁) > ε(θ₂)) over the domain (0, π/2). -/
+theorem compliance_floor_monotonicity (α : ℝ) (hα : 0 < α) (θ₁ θ₂ : ℝ)
+    (hθ₁_pos : 0 < θ₁) (h_step : θ₁ < θ₂) (hθ₂_lt : θ₂ < Real.pi / 2) :
+    ComplianceFloor α θ₂ < ComplianceFloor α θ₁ := by
+  unfold ComplianceFloor
+  -- 1. Establish the domain boundaries for individual angle nodes
+  have hθ₁_lt : θ₁ < Real.pi / 2 := by linarith
+  have hθ₂_pos : 0 < θ₂ := by linarith
+  -- 2. Certify that the sine tracks are strictly positive on the target open quadrant using correct Mathlib4 lemmas
+  have h_sin1 : 0 < Real.sin θ₁ := Real.sin_pos_of_pos_of_lt_pi hθ₁_pos (by linarith [Real.pi_pos])
+  have h_sin2 : 0 < Real.sin θ₂ := Real.sin_pos_of_pos_of_lt_pi hθ₂_pos (by linarith [Real.pi_pos])
+  -- 3. Invoke the trigonometric difference formula sin(θ₂ - θ₁) to analyze phase shears
+  have h_diff_pos : 0 < θ₂ - θ₁ := by linarith
+  have h_diff_lt : θ₂ - θ₁ < Real.pi := by linarith [Real.pi_pos]
+  have h_sin_diff : 0 < Real.sin (θ₂ - θ₁) := Real.sin_pos_of_pos_of_lt_pi h_diff_pos h_diff_lt
+  -- Unpack sin(θ₂ - θ₁) = sin θ₂ * cos θ₁ - cos θ₂ * sin θ₁ definitionally
+  rw [Real.sin_sub] at h_sin_diff
+  -- 4. Rearrange the products to prove that the cross multipliers are strictly ordered
+  have h_trig_order : Real.cos θ₂ * Real.sin θ₁ < Real.cos θ₁ * Real.sin θ₂ := by
+    have h_comm1 : Real.sin θ₂ * Real.cos θ₁ = Real.cos θ₁ * Real.sin θ₂ := mul_comm _ _
+    linarith
+  -- 5. Cross-multiply the fractions using Mathlib's native div_lt_div_iff₀ bounder
+  have h_frac_lt : Real.cos θ₂ / Real.sin θ₂ < Real.cos θ₁ / Real.sin θ₁ := by
+    rw [div_lt_div_iff₀ h_sin2 h_sin1]
+    exact h_trig_order
+  -- 6. Scale both sides by the strictly positive regularizer constant α
+  exact mul_lt_mul_of_pos_left h_frac_lt hα
+
+omit [DecidableEq N] [Fintype N] in
+/-- Divergence Bound of the Compliance Floor.
+    Constructively proves that as the alignment angle approaches the collapse boundary (θ -> 0),
+    the compliance floor scales inversely with the angle. For any angle controlled by the 
+    linear bounds ratio of the regularizers, the compliance floor stays strictly lower-bounded. -/
+theorem compliance_floor_divergence_bounds (α : ℝ) (hα : 0 < α) (M : ℝ) (hM : 0 < M) (θ : ℝ) 
+    (h_sin_pos : 0 < Real.sin θ) (h_cos : 1 / 2 ≤ Real.cos θ) (h_sin : Real.sin θ ≤ θ) (h_bound : θ ≤ α / (2 * M)) :
+    M ≤ ComplianceFloor α θ := by
+  unfold ComplianceFloor
+  -- 1. Combine the real coordinate inequalities to prove that M * sin(θ) ≤ α * cos(θ)
+  have h_ratio : M * Real.sin θ ≤ α * Real.cos θ := by
+    have h_left : M * Real.sin θ ≤ M * θ := mul_le_mul_of_nonneg_left h_sin (by linarith)
+    have h_mid : M * θ ≤ α / 2 := by
+      have h_scale : 2 * M * θ ≤ 2 * M * (α / (2 * M)) := mul_le_mul_of_nonneg_left h_bound (by linarith)
+      rw [mul_div_cancel₀ α (by linarith [hM])] at h_scale
+      linarith
+    have h_right : α / 2 ≤ α * Real.cos θ := by
+      have h_cos_scale : α * (1 / 2) ≤ α * Real.cos θ := mul_le_mul_of_nonneg_left h_cos (by linarith)
+      linarith
+    linarith
+  -- 2. Flatten the nested parenthesis structure using Mathlib4's native mul_div lemma
+  rw [mul_div]
+  -- 3. Convert to fractional division form cleanly using the provided domain positivity
+  rw [le_div_iff₀ h_sin_pos]
+  linarith
+
+
+
