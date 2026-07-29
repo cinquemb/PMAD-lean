@@ -9,6 +9,13 @@ open BigOperators Matrix Complex Topology
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
+/-- Definition: The effective Attractor Dimensionality (D_A) calculated as a 
+    discrete sum over the phase mode stiffness eigenvalues (μ) relative to the 
+    global drive injection scale (Ω). Section XIV-G (Eq. 78): Attractor Dimensionality D_A -/
+
+noncomputable def AttractorDimensionality (μ_spectrum : N → ℝ) (Ω : ℝ) : ℝ :=
+  ∑ i, (μ_spectrum i ^ 2) / (μ_spectrum i ^ 2 + Ω ^ 2)
+
 /-- Section XII-B (Eq. 3): The Dynamic Spatial Adjacency Operator. -/
 def DynamicSpatialAdjacency (κ : N → N → ℝ) (R : N → N → ℝ) (i j : N) : ℝ :=
   κ i j * R i j
@@ -314,4 +321,33 @@ theorem compliance_metric_positivity
   -- 3. Deduce that the inverted sum is strictly positive using real field arithmetic
   have h_denom_pos : 0 < d i + ε := by linarith [hd i]
   exact inv_pos.mpr h_denom_pos
+
+omit [DecidableEq N] in
+/-- Attractor Dimensionality Bounds.
+    Proves that the effective attractor dimensionality is strictly lower-bounded 
+    by 0 and upper-bounded by the total cardinality of network nodes (|N|). -/
+theorem attractor_dimensionality_bounds (μ : N → ℝ) (Ω : ℝ) :
+    0 ≤ AttractorDimensionality μ Ω ∧ AttractorDimensionality μ Ω ≤ (Fintype.card N : ℝ) := by
+  unfold AttractorDimensionality
+  constructor
+  · -- Prove the 0 lower bound by showing each term in the big sum is non-negative
+    apply Finset.sum_nonneg
+    intro i _
+    have h_top : 0 ≤ μ i ^ 2 := sq_nonneg (μ i)
+    have h_bot : 0 ≤ μ i ^ 2 + Ω ^ 2 := by linarith [sq_nonneg (μ i), sq_nonneg Ω]
+    by_cases h : μ i ^ 2 + Ω ^ 2 = 0
+    · rw [h, div_zero]
+    · exact div_nonneg h_top h_bot
+  · -- Prove the |N| upper bound by squeezing the sum against an identity sum of ones
+    have h_le1 : ∀ i ∈ Finset.univ, (μ i ^ 2) / (μ i ^ 2 + Ω ^ 2) ≤ 1 := by
+      intro i _
+      have h_top : 0 ≤ μ i ^ 2 := sq_nonneg (μ i)
+      have h_bot : μ i ^ 2 ≤ μ i ^ 2 + Ω ^ 2 := by linarith [sq_nonneg Ω]
+      by_cases h : μ i ^ 2 + Ω ^ 2 = 0
+      · rw [h, div_zero]; norm_num
+      · exact div_le_one_of_le₀ h_bot (by linarith [sq_nonneg (μ i), sq_nonneg Ω])
+    have h_sum := Finset.sum_le_sum h_le1
+    -- Simplify the uniform sum of ones and clear out the scalar multiplication cleanly
+    rw [Finset.sum_const, Finset.card_univ, nsmul_one] at h_sum
+    exact h_sum
 

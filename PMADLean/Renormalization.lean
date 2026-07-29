@@ -7,9 +7,6 @@ open BigOperators Filter Matrix
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
-/-- Section XIV-G (Eq. 78): Attractor Dimensionality D_A -/
-noncomputable def AttractorDimensionality (μ_spectrum : N → ℝ) (Ω : ℝ) : ℝ :=
-  ∑ i, (μ_spectrum i ^ 2) / (μ_spectrum i ^ 2 + Ω ^ 2)
 
 /-- Section XIV-H (Eq. 81): The Wilsonian Renormalization Group Flow derivative. -/
 noncomputable def AttractorDimensionalityRGFlow (μ_spectrum : N → ℝ) (Ω : ℝ) : ℝ :=
