@@ -27,6 +27,7 @@ def IsAdmissibleAttractor (lambda_max : ℝ → ℝ) : Prop :=
   -- limsup_{T → ∞} (1/T) ∫₀ᵀ λ_max(t) dt < 0
   limsup (fun T => (1 / T) * ∫ t in (0)..T, lambda_max t) atTop < 0
 
+set_option linter.unusedTactic false in
 omit [DecidableEq N] in
 /-- If a flow has negative Lyapunov exponents / admissible attractors, it satisfies Axiom A2 (Attractor Determinism) by converging to an attractor set. -/
 theorem pmad_flow_converges_to_attractor 
