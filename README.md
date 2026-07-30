@@ -3,7 +3,7 @@
 [![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.18511169.svg)](https://doi.org/10.5281/zenodo.18511169)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0005--5585--0584-brightgreen)](https://orcid.org/0009-0005-5585-0584)
 [![SSRN](https://img.shields.io/badge/SSRN-10.2139/ssrn.6837299-brightblue)](https://dx.doi.org/10.2139/ssrn.6837299)
-[![iNSpire HEP](https://img.shields.io/badge/inspirehep-brightred)](https://inspirehep.net/authors/3167050)
+[![iNSpire HEP](https://img.shields.io/badge/iNSpire%20HEP-3167050-brightred)](https://inspirehep.net/authors/3167050)
 
 
 An open-source mathematical repository containing the formal machine-checked verification of **Phase-Mediated Attractor Dynamics (PMAD)**, coded and verified using the **Lean 4** interactive theorem prover and the **Mathlib** ecosystem.
