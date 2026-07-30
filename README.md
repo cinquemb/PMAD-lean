@@ -2,7 +2,7 @@
 
 [![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.18511169.svg)](https://doi.org/10.5281/zenodo.18511169)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0005--5585--0584-brightgreen)](https://orcid.org/0009-0005-5585-0584)
-[![SSRN](https://cdn.ssrn.com/ssrn-header-widget/static/media/ssrn.11589acb53bc518aa22929bf19add113.svg)](https://dx.doi.org/10.2139/ssrn.6837299)
+[![SSRN](https://img.shields.io/badge/SSRN-brightblue)](https://dx.doi.org/10.2139/ssrn.6837299)
 [![iNSpire HEP](https://img.shields.io/badge/inspirehep-brightred)](https://inspirehep.net/authors/3167050)
 
 
