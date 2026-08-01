@@ -12,7 +12,7 @@ This library codifies the theoretical foundations presented in the companion man
 
 ## Repository Status
 * **Toolchain Snapshot:** `v4.33.0-rc1` (Aligned with Mathlib's modular infrastructure)
-* **Compilation Status:** 100% Successful Pass (`5,248 jobs built clean`)
+* **Compilation Status:** 100% Successful Pass (`5,250 jobs built clean`)
 * **Logical Cloture:** Fully mathematically closed without placeholders (`sorry`-free core)
 
 ---
@@ -35,6 +35,14 @@ graph TD
         Probability_uncoupled_flow_volume_conservation["uncoupled_flow_volume_conservation"]
         Probability_MacroscopicBornProbability["MacroscopicBornProbability"]
         Probability_born_rule_resonance_limit["born_rule_resonance_limit"]
+        Probability_born_rule_derived_from_paper_dynamics["born_rule_derived_from_paper_dynamics"]
+        Probability_AmplitudeWeight["AmplitudeWeight"]
+        Probability_born_rule_general_weighted_limit["born_rule_general_weighted_limit"]
+        Probability_backwards["backwards"]
+        Probability_born_rule_bounded_noise_concentration["born_rule_bounded_noise_concentration"]
+        Probability_derive_ftc_evolution["derive_ftc_evolution"]
+        Probability_born_rule_noise_degradation_bound["born_rule_noise_degradation_bound"]
+        Probability_born_rule_noise_degradation_bound_derive_ftc_evolution["born_rule_noise_degradation_bound_derive_ftc_evolution"]
         Probability_TimeSeriesSample["TimeSeriesSample"]
         Probability_data_pipeline_discretization_bound["data_pipeline_discretization_bound"]
     end
@@ -142,6 +150,32 @@ graph TD
     Probability_born_rule_resonance_limit --> Probability_MacroscopicBornProbability
     Probability_born_rule_resonance_limit --> Probability_overlap_limit_of_matched_noiseless_flow
     Probability_born_rule_resonance_limit --> Probability_PhaseOverlapFunctional
+    Probability_born_rule_derived_from_paper_dynamics ==X-Module==> Axioms_Trajectory
+    Probability_born_rule_derived_from_paper_dynamics ==X-Module==> Dynamics_IsPmadFlow
+    Probability_born_rule_derived_from_paper_dynamics --> Probability_MacroscopicBornProbability
+    Probability_born_rule_derived_from_paper_dynamics --> Probability_PhaseOverlapFunctional
+    Probability_born_rule_general_weighted_limit ==X-Module==> Axioms_Trajectory
+    Probability_born_rule_general_weighted_limit ==X-Module==> Dynamics_IsPmadFlow
+    Probability_born_rule_general_weighted_limit --> Probability_MacroscopicBornProbability
+    Probability_born_rule_general_weighted_limit --> Probability_AmplitudeWeight
+    Probability_born_rule_general_weighted_limit --> Probability_PhaseOverlapFunctional
+    Probability_born_rule_bounded_noise_concentration ==X-Module==> Axioms_Trajectory
+    Probability_born_rule_bounded_noise_concentration ==X-Module==> Dynamics_IsPmadFlow
+    Probability_born_rule_bounded_noise_concentration --> Probability_MacroscopicBornProbability
+    Probability_born_rule_bounded_noise_concentration --> Probability_AmplitudeWeight
+    Probability_born_rule_bounded_noise_concentration --> Probability_PhaseOverlapFunctional
+    Probability_derive_ftc_evolution ==X-Module==> Axioms_Trajectory
+    Probability_derive_ftc_evolution ==X-Module==> Dynamics_IsPmadFlow
+    Probability_born_rule_noise_degradation_bound ==X-Module==> Axioms_Trajectory
+    Probability_born_rule_noise_degradation_bound ==X-Module==> Dynamics_IsPmadFlow
+    Probability_born_rule_noise_degradation_bound --> Probability_MacroscopicBornProbability
+    Probability_born_rule_noise_degradation_bound --> Probability_AmplitudeWeight
+    Probability_born_rule_noise_degradation_bound --> Probability_PhaseOverlapFunctional
+    Probability_born_rule_noise_degradation_bound --> Probability_derive_ftc_evolution
+    Probability_born_rule_noise_degradation_bound_derive_ftc_evolution ==X-Module==> Axioms_Trajectory
+    Probability_born_rule_noise_degradation_bound_derive_ftc_evolution ==X-Module==> Dynamics_IsPmadFlow
+    Probability_born_rule_noise_degradation_bound_derive_ftc_evolution --> Probability_MacroscopicBornProbability
+    Probability_born_rule_noise_degradation_bound_derive_ftc_evolution --> Probability_AmplitudeWeight
     Probability_data_pipeline_discretization_bound --> Probability_TimeSeriesSample
     Renormalization_rg_flow_monotonicity --> Renormalization_AttractorDimensionalityRGFlow
     Renormalization_rg_flow_ir_fixed_point ==X-Module==> Metrics_AttractorDimensionality
@@ -205,7 +239,6 @@ graph TD
     Dynamics_global_phase_gauge_invariance ==X-Module==> Axioms_Trajectory
     Dynamics_global_phase_gauge_invariance --> Dynamics_IsPmadFlow
     Dynamics_stability_under_bounded_perturbations ==X-Module==> Axioms_IsDynamicallyStable
-
 ```
 
 ---
