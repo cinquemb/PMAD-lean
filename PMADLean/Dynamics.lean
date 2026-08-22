@@ -27,6 +27,21 @@ def IsAdmissibleAttractor (lambda_max : ℝ → ℝ) : Prop :=
   -- limsup_{T → ∞} (1/T) ∫₀ᵀ λ_max(t) dt < 0
   limsup (fun T => (1 / T) * ∫ t in (0)..T, lambda_max t) atTop < 0
 
+/-- Section XII-A (Eq. 2): The Phase Flow Vector Field Derivative (ϕ_dot_i).
+Computes the deterministic trajectory velocity under drive-locked quasienergies 
+and phase-mediated couplings. -/
+noncomputable def PhaseFlowDerivative {N : Type*} [Fintype N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (i : N) : ℝ :=
+  ω i + ∑ j : N, κ i j * Real.sin (ϕ t j - ϕ t i)
+
+/-- Section XII-O (Eq. 37 & 50): The Localized Phase Space Occupation Density.
+Measures local phase velocity fluctuations under the non-autonomous flow map 
+relative to the integrated drive scale Ω. -/
+noncomputable def PhaseSpaceOccupationDensity {N : Type*} [Fintype N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (i : N) (Ω : ℝ) : ℝ :=
+  let ϕ_dot := PhaseFlowDerivative ω κ ϕ t i
+  if Ω = 0 then 1 else Real.exp (- (ϕ_dot ^ 2) / (2 * Ω ^ 2))
+
 set_option linter.unusedTactic false in
 omit [DecidableEq N] in
 /-- If a flow has negative Lyapunov exponents / admissible attractors, it satisfies Axiom A2 (Attractor Determinism) by converging to an attractor set. -/
