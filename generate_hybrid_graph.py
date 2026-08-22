@@ -4,11 +4,14 @@ import re
 source_dir = "PMADLean"
 files_to_scan = [f for f in os.listdir(source_dir) if f.endswith(".lean")]
 
+# Keep your exact pattern and blacklists completely untouched
 decl_pattern = re.compile(r'\b(?:theorem|lemma|def|structure|inductive)\s+([A-Za-z0-9_\.]+)')
 tactics_blacklist = {'have', 'rw', 'using', 'unfold', 'of', 'block'}
 
 file_declarations = {}
 decl_to_full_id = {}
+def_nodes = set()          
+node_complexity = {}       
 
 for filename in files_to_scan:
     module = filename.replace(".lean", "")
@@ -23,6 +26,11 @@ for filename in files_to_scan:
                 full_id = f"{module}_{name}"
                 file_declarations[module].append((name, full_id))
                 decl_to_full_id[name] = full_id
+                
+                # FIX: Look at the exact string match text directly to find definitions
+                match_text = match.group(0)
+                if any(match_text.startswith(kw) for kw in ['def', 'structure', 'inductive']):
+                    def_nodes.add(full_id)
 
 # Establish visual grouping boxes to force readable vertical stacking
 module_meta = {
@@ -39,8 +47,13 @@ mermaid_lines = [
     "graph TD",
     "    %% Scannable Layout Controls",
     "    classDef default fill:#111827,stroke:#374151,stroke-width:1px,color:#e5e7eb;",
+    "    classDef heavyNode fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff;",
+    "    classDef trivialNode fill:#1f2937,stroke:#9ca3af,stroke-width:1px,color:#9ca3af;",
     "    linkStyle default stroke:#4b5563,stroke-width:1px;"
 ]
+
+heavy_node_ids = []
+trivial_node_ids = []
 
 # Generate clustered layout structural blocks
 for module, decls in file_declarations.items():
@@ -52,7 +65,17 @@ for module, decls in file_declarations.items():
     # Force interior theorems to align Left-to-Right within the vertical module block
     mermaid_lines.append("        direction LR") 
     for short_name, full_id in decls:
-        mermaid_lines.append(f"        {full_id}[\"{short_name}\"]")
+        # Check if this node is a known structure/def or a proof type
+        if full_id in def_nodes:
+            mermaid_lines.append(f"        {full_id}(\"{short_name}\")") # Definitions get clean rounded capsules
+        else:
+            complexity = node_complexity.get(full_id, "heavy")
+            if complexity == "trivial":
+                mermaid_lines.append(f"        {full_id}[\"{short_name} ⟨id⟩\"]") # Simple proofs get gray tags
+                trivial_node_ids.append(full_id)
+            else:
+                mermaid_lines.append(f"        {full_id}[[\"{short_name} 🔥\"]]") # Stiff analytic proofs keep the fire stadium box
+                heavy_node_ids.append(full_id)
     mermaid_lines.append("    end")
     mermaid_lines.append(f"    style {module} fill:{meta['color']},stroke:{meta['stroke']},stroke-width:2px,color:#fff;")
 
@@ -82,6 +105,14 @@ for filename in files_to_scan:
             continue
         src_full = f"{module}_{src_short}"
         
+        # FIX: Check if the block contains simple termination tokens like rfl or le_refl
+        if src_full not in def_nodes:
+            body_lower = block.lower()
+            if 'rfl' in body_lower or 'le_refl' in body_lower:
+                node_complexity[src_full] = "trivial"
+            else:
+                node_complexity[src_full] = "heavy"
+        
         tokens = re.findall(r'\b([A-Za-z0-9_\.]+)\b', block)
         for token in tokens:
             if token in decl_to_full_id and token != src_short:
@@ -98,7 +129,14 @@ for filename in files_to_scan:
                     mermaid_lines.append(edge)
                     seen_edges.add(edge)
 
+# Append specialized class mappings safely to the bottom of the line block array
+if heavy_node_ids:
+    mermaid_lines.append(f"    class {','.join(heavy_node_ids)} heavyNode;")
+if trivial_node_ids:
+    mermaid_lines.append(f"    class {','.join(trivial_node_ids)} trivialNode;")
+
 with open("theorem_architecture.md", "w", encoding="utf-8") as out:
     out.write("\n".join(mermaid_lines) + "\n")
 
 print("✔ Optimized high-scannability graph written to theorem_architecture.md")
+
