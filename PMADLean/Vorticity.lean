@@ -75,24 +75,46 @@ omit [DecidableEq N] [Fintype N] in
     microscopic phase collapse ($C \to 0$). Verifies that the temporal component $g_{00}$ 
     is bounded continuously by the localized compliance floor parameter. -/
 theorem compliance_floor_prevents_spacetime_singularity
-    (M_phi Q_phi a theta : ℝ) :
+    (M_phi Q_phi a theta r : ℝ) (hr_low : 0 ≤ r) (hr_high : r ≤ 1) :
 
-    |UnifiedMacroscopicSpacetimeMetric M_phi Q_phi 1 1 a theta 1 0 0| ≤ 1 + 2 * |M_phi| + Q_phi ^ 2 := by
+    |UnifiedMacroscopicSpacetimeMetric M_phi Q_phi 1 1 a theta r 0 0| ≤ 1 + 2 * |M_phi| + Q_phi ^ 2 := by
   -- Unfold the local tracking coordinate proxy 'r' inside the matrix definition
   unfold UnifiedMacroscopicSpacetimeMetric
   -- Force Lean to unpack the raw element at index 0 0 out of the matrix vector macro
   simp only [of_apply, cons_val_zero]
   -- Clean up the division by 1 expressions natively
-  simp only [div_one, mul_one]
+  simp only [div_one]
   -- Decompose the absolute value into two real inequalities using abs_le
   rw [abs_le]
   -- THE LOGICAL FIX: Call the exact upper and lower bound lemmas tracking M_phi from your mathlib search
   have hM1 := le_abs_self M_phi
   have hM2 := neg_le_abs M_phi
+  -- Track the maximum possible geometric distortion across the spatial interval bounds
+  have h_r_bound1 : 2 * M_phi * r ≤ 2 * |M_phi| := by
+    by_cases hM : 0 ≤ M_phi
+    · rw [abs_of_nonneg hM]
+      nlinarith
+    · have hM_neg : M_phi < 0 := lt_of_not_ge hM
+      have h_prod : M_phi * r ≤ 0 := mul_nonpos_of_nonpos_of_nonneg (le_of_lt hM_neg) hr_low
+      have h_abs_pos : 0 ≤ |M_phi| := abs_nonneg M_phi
+      linarith
+  have h_r_bound2 : -2 * |M_phi| ≤ 2 * M_phi * r := by
+    by_cases hM : 0 ≤ M_phi
+    · rw [abs_of_nonneg hM]
+      nlinarith
+    · rw [abs_of_neg (lt_of_not_ge hM)]
+      have h_sub : M_phi * r - M_phi = M_phi * (r - 1) := by ring
+      have h_factor : 0 ≤ M_phi * r - M_phi := by
+        rw [h_sub]
+        have h1 : M_phi ≤ 0 := by linarith
+        have h2 : r - 1 ≤ 0 := by linarith
+        exact mul_nonneg_of_nonpos_of_nonpos h1 h2
+      linarith
   -- Close both inequalities simultaneously using linear ordering and squaring invariants
   constructor
   · linarith [sq_nonneg Q_phi]
   · linarith [sq_nonneg Q_phi]
+
 
 /-- Definition: A workflow mapping is a valid PMAD Transport Arrow from module A to module B 
     if a verified physical boundary condition in module A logically enforces the 
