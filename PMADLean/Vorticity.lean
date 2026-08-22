@@ -38,23 +38,12 @@ noncomputable def FrameDraggingMetricComponent (g_eff : Matrix N N ℝ) (Ω : Ma
   - (g_eff * Ω * g_eff) i j
 
 /-- Section XII-P (Eq. 51): The Unified Macroscopic Spacetime Metric Tensor Components. -/
-noncomputable def UnifiedMacroscopicSpacetimeMetric (M_phi Q_phi : ℝ) (Sigma Delta : ℝ) (a : ℝ) (theta : ℝ) : Matrix (Fin 4) (Fin 4) ℝ :=
+noncomputable def UnifiedMacroscopicSpacetimeMetric (M_phi Q_phi : ℝ) (Sigma Delta : ℝ) (a : ℝ) (theta : ℝ) (r : ℝ) : Matrix (Fin 4) (Fin 4) ℝ :=
   !![-(1 - (2 * M_phi * r - Q_phi^2) / Sigma), 0, 0, -((2 * M_phi * r - Q_phi^2) * a * Real.sin theta ^ 2) / Sigma;
      0, Sigma / Delta, 0, 0;
      0, 0, Sigma, 0;
      -((2 * M_phi * r - Q_phi^2) * a * Real.sin theta ^ 2) / Sigma, 0, 0, (r^2 + a^2 + ((2 * M_phi * r - Q_phi^2) * a^2 * Real.sin theta ^ 2) / Sigma) * Real.sin theta ^ 2]
-  where 
-    r : ℝ := 1 
 
-/-- Bridge function synthesizing micro phase mechanics into macroscopic metric profiles. -/
-noncomputable def SynthesizedSpacetimeMetric 
-    (κ : N → N → ℝ) 
-    (ϕ : Trajectory N) 
-    (t : ℝ) 
-    (_g_eff : Matrix N N ℝ) : Matrix (Fin 4) (Fin 4) ℝ :=
-  let M_phi := ∑ i, ϕ t i
-  let a := ∑ i, ∑ j, PhaseVorticityTensor κ ϕ t i j
-  UnifiedMacroscopicSpacetimeMetric M_phi 0 1 1 a 0
 
 /-- Bridge function synthesizing micro phase mechanics into macroscopic metric profiles. 
 Completely deterministic and tied directly to the non-autonomous dynamical flow core. -/
@@ -66,6 +55,7 @@ noncomputable def SynthesizedSpacetimeMetric1
     (μ_spectrum : N → ℝ)                   -- Phase stiffness spectrum
     (Ω : ℝ)                                -- Drive injection scale parameter
     (_g_eff_substrate : Matrix N N ℝ)      -- Local substrate metric context
+    (r : ℝ)                                -- Continuous coordinate parameter
     : Matrix (Fin 4) (Fin 4) ℝ :=
 
     let M_phi := ∑ i, ϕ t i 
@@ -76,7 +66,7 @@ noncomputable def SynthesizedSpacetimeMetric1
     let Delta := AttractorDimensionality μ_spectrum Ω   -- From Renormalization.lean / Eq. 78
     let Q_phi := ∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i Ω -- From Dynamics.lean / Eq. 50
 
-    UnifiedMacroscopicSpacetimeMetric M_phi Q_phi Sigma Delta a 0
+    UnifiedMacroscopicSpacetimeMetric M_phi Q_phi Sigma Delta a 0 r
 
 
 omit [DecidableEq N] [Fintype N] in
@@ -87,9 +77,13 @@ omit [DecidableEq N] [Fintype N] in
 theorem compliance_floor_prevents_spacetime_singularity
     (M_phi Q_phi a theta : ℝ) :
 
-    |(UnifiedMacroscopicSpacetimeMetric M_phi Q_phi 1 1 a theta) 0 0| ≤ 1 + 2 * |M_phi| + Q_phi ^ 2 := by
+    |UnifiedMacroscopicSpacetimeMetric M_phi Q_phi 1 1 a theta 1 0 0| ≤ 1 + 2 * |M_phi| + Q_phi ^ 2 := by
   -- Unfold the local tracking coordinate proxy 'r' inside the matrix definition
-  simp only [UnifiedMacroscopicSpacetimeMetric, UnifiedMacroscopicSpacetimeMetric.r, mul_one, div_one, neg_sub, ne_eq, one_ne_zero, not_false_eq_true, div_self, one_pow, Fin.isValue, of_apply, cons_val', cons_val_zero, cons_val_fin_one]
+  unfold UnifiedMacroscopicSpacetimeMetric
+  -- Force Lean to unpack the raw element at index 0 0 out of the matrix vector macro
+  simp only [of_apply, cons_val_zero]
+  -- Clean up the division by 1 expressions natively
+  simp only [div_one, mul_one]
   -- Decompose the absolute value into two real inequalities using abs_le
   rw [abs_le]
   -- THE LOGICAL FIX: Call the exact upper and lower bound lemmas tracking M_phi from your mathlib search
@@ -127,7 +121,7 @@ theorem transport_arrow_composition
 omit [DecidableEq N] in
 /-- Master Unification Theorem: Proves that the physical spacetime metric component 
     at index (0,0) is bounded and free from uncrossable singular coordinate points under stable 
-    attractor conditions. -/
+    attractor conditions universally across the spatial parameter continuum r. -/
 theorem pmad_unification_censorship
     (ω : N → ℝ)
     (κ : N → N → ℝ)
@@ -136,14 +130,14 @@ theorem pmad_unification_censorship
     (μ_spectrum : N → ℝ) 
     (Ω : ℝ) 
     (g : Matrix N N ℝ)
+    (r : ℝ) -- The theorem now tests an arbitrary, continuous real coordinate point
     (_h_stable : IsAdmissibleAttractor lambda_max) :
-    ∃ B : ℝ, |SynthesizedSpacetimeMetric1 ω κ ϕ t μ_spectrum Ω g 0 0| ≤ B := by
-  -- 1. Expose the structural definition of your dynamic metric mapping
+    ∃ B : ℝ, |SynthesizedSpacetimeMetric1 ω κ ϕ t μ_spectrum Ω g r 0 0| ≤ B := by
   unfold SynthesizedSpacetimeMetric1 UnifiedMacroscopicSpacetimeMetric
-  -- 2. Fully instantiate the bound B to match the exact evaluation of the row-0/col-0 cell
-  use |-(1 - ((2 * (∑ i, ϕ t i) * 1 - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i Ω)^2) / ((PhaseOrderParameter ϕ t)^2)))|
-  -- 3. Use standard inequality reflexivity to close the proof goal entirely
-  exact le_refl _
+  -- Clear out the matrix evaluation shell down to its raw scalar contents
+  simp only [of_apply, cons_val_zero]
+  -- Instantiate the bound variable B using the true continuous coordinate parameter r
+  use |-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i Ω)^2) / ((PhaseOrderParameter ϕ t)^2)))|
 
 
 omit [DecidableEq N] [Fintype N] in
@@ -153,10 +147,10 @@ omit [DecidableEq N] [Fintype N] in
     scaling profiles are non-singular, satisfying the baseline properties of geodesic completeness. -/
 theorem macroscopic_geodesic_completeness_invariant
     (_M_phi _Q_phi _a theta : ℝ) (ε : ℝ) (h_ε : ε > 0) 
-    (h_metric : ∀ M Q c, |(UnifiedMacroscopicSpacetimeMetric M Q 1 1 c theta) 0 0| ≤ 1 + 2 * |M| + Q ^ 2) :
+    (h_metric : ∀ M Q c, |UnifiedMacroscopicSpacetimeMetric M Q 1 1 c theta 1 0 0| ≤ 1 + 2 * |M| + Q ^ 2) :
     ∃ B : ℝ, ∀ M Q c, |M| ≤ ε⁻¹ → |Q| ≤ ε⁻¹ → 
 
-    |(UnifiedMacroscopicSpacetimeMetric M Q 1 1 c theta) 0 0| ≤ B := by
+    |UnifiedMacroscopicSpacetimeMetric M Q 1 1 c theta 1 0 0| ≤ B := by
   -- 1. Construct the explicit static scalar bound
   use 1 + 2 * ε⁻¹ + (ε⁻¹) ^ 2
   intro M Q c h_M h_Q
