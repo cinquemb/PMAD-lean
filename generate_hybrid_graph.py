@@ -3,7 +3,7 @@ import re
 
 source_dir = "PMADLean"
 files_to_scan = [f for f in os.listdir(source_dir) if f.endswith(".lean")]
-
+#NOTE: DONT USE `theorm` IN COMMENTS IN
 # Keep your exact pattern and blacklists completely untouched
 decl_pattern = re.compile(r'\b(?:theorem|lemma|def|structure|inductive)\s+([A-Za-z0-9_\.]+)')
 tactics_blacklist = {'have', 'rw', 'using', 'unfold', 'of', 'block'}
