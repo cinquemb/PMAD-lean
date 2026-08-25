@@ -8,6 +8,7 @@ import PMADLean.Probability
 import PMADLean.Renormalization
 import PMADLean.Vorticity
 import PMADLean.Incompleteness
+import PMADLean.Test
 
 /--
   The PMADLean root namespace serves as the centralized entry point 
