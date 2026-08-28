@@ -8,6 +8,7 @@ import PMADLean.Vorticity
 import PMADLean.Incompleteness
 import PMADLean.GraphGen
 import PMADLean.Test
+import PMADLean.PhyslibBridge
 
 open Lean
 
@@ -22,7 +23,8 @@ unsafe def main : IO Unit := do
     { module := `PMADLean.Vorticity },
     { module := `PMADLean.Incompleteness },
     { module := `PMADLean.GraphGen },
-    { module := `PMADLean.Test }
+    { module := `PMADLean.Test },
+    { module := `PMADLean.PhyslibBridge }
   ]
   
   Lean.withImportModules modules (opts := {}) (trustLevel := 0) fun env => do

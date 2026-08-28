@@ -40,7 +40,8 @@ module_meta = {
     "Metrics": {"title": "Metrics.lean (Compliance Geometry)", "color": "#064e3b", "stroke": "#10b981"},
     "Renormalization": {"title": "Renormalization.lean (Scale Decay)", "color": "#3f1dcb", "stroke": "#8b5cf6"},
     "Vorticity": {"title": "Vorticity.lean (Spacetime Synthesis)", "color": "#7c2d12", "stroke": "#ea580c"},
-    "Incompleteness": {"title": "Incompleteness.lean (Decoupled Limits)", "color": "#451a03", "stroke": "#b45309"}
+    "Incompleteness": {"title": "Incompleteness.lean (Decoupled Limits)", "color": "#451a03", "stroke": "#b45309"},
+    "Test": {"title": "Test.lean (spiral-vm runtime example)", "color": "#451a03", "stroke": "#b45309"}
 }
 
 mermaid_lines = [

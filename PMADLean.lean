@@ -9,6 +9,7 @@ import PMADLean.Renormalization
 import PMADLean.Vorticity
 import PMADLean.Incompleteness
 import PMADLean.Test
+import PMADLean.PhyslibBridge
 
 /--
   The PMADLean root namespace serves as the centralized entry point 
