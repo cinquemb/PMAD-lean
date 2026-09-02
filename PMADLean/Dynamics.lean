@@ -17,7 +17,7 @@ variable {N : Type*} [DecidableEq N] [Fintype N]
 def IsPmadFlow (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ) : Prop :=
   -- Enforce strict Bounded Noise Constraint
   (∀ t i, |ξ t i| ≤ B) ∧
-  -- Enforce the exact differential structure of Equation 2
+  -- Enforce the exact differential of Equation 2
   (∀ t i, HasDerivAt (fun t' => (ϕ t' i : ℝ))
     (ω i + ∑ j, κ i j * Real.sin (ϕ t j - ϕ t i) + ξ t i) t)
 
@@ -67,7 +67,7 @@ theorem pmad_flow_converges_to_attractor
     simp only [Set.mem_univ, iff_true, Set.mem_ofPred_eq]
     -- Apply the neighborhood inclusion principle (x ∈ U follows from U ∈ 𝓝 x)
     apply mem_of_mem_nhds
-    -- Apply the neighborhood tracking mapping directly across your bounds criteria
+    -- Apply the neighborhood tracking mapping directly across bounds criteria
     apply hU (ϕ' t)
     intro i
     -- The bounds match the function variable identically without any name-shadowing hacks!
@@ -110,7 +110,7 @@ theorem stability_under_bounded_perturbations
     (lambda_max : ℝ) (δ : ℝ) (hδ : 0 < δ)
     (h_stable_margin : lambda_max < -δ) :
     IsDynamicallyStable lambda_max := by
-  -- Unfold your true axiomatic stability definition directly from Axioms.lean
+  -- Unfold axiomatic stability definition directly from Axioms.lean
   unfold IsDynamicallyStable
   -- 1. Deduce the strict negativity using simple real number bounds arithmetic
   have h_neg : -δ < 0 := neg_lt_zero.mpr hδ

@@ -18,6 +18,38 @@ variable {N : Type*} [DecidableEq N] [Fintype N]
 noncomputable def AttractorDimensionality (μ_spectrum : N → ℝ) (Ω : ℝ) : ℝ :=
   ∑ i, (μ_spectrum i ^ 2) / (μ_spectrum i ^ 2 + Ω ^ 2)
 
+/-- Section XII-D (Eq. 7): The Instantaneous Phase Momentum Vector Field. -/
+noncomputable def PhaseMomentum (dphi : N → ℝ) : ℝ :=
+  (1 / (Fintype.card N : ℝ)) * ∑ i, dphi i
+
+/-- Definition: The emergent phase metric g_eff (Eq. 29) -/
+noncomputable def EmergentComplianceMetric 
+    (C : Matrix N N ℝ) 
+    (ε : ℝ) 
+    (_h_reg : ε > 0) : Matrix N N ℝ :=
+  let regularized_stiffness := C + ε • (1 : Matrix N N ℝ)
+  regularized_stiffness⁻¹
+
+/-- Section XII-G (Eq. 47): Define the Phase Velocity Gradient field. -/
+noncomputable def LocalPhaseVelocityGradient (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) : N → N → ℝ :=
+  fun i j => κ i j * Real.cos (ϕ t j - ϕ t i)
+
+/-- Section XII-G (Eq. 48): The Localized Phase Vorticity Tensor (Ω_ij). -/
+noncomputable def LocalPhaseVorticityTensor (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) : N → N → ℝ :=
+  fun i j => LocalPhaseVelocityGradient κ ϕ t i j - LocalPhaseVelocityGradient κ ϕ t j i
+
+/-- Section XIV-G: The Endogenized Dynamic Compliance Floor Function.
+    Transitions ε from a static parameter into a state-dependent physical field 
+    driven by the Covariant Lyapunov Vector (CLV) hyper-angle (θ). -/
+noncomputable def ComplianceFloor (α : ℝ) (θ : ℝ) : ℝ :=
+  α * (Real.cos θ / Real.sin θ)
+
+/-- Section T-4: Macro-Statistical Metric Trace Density.
+    Computes the network-normalized average trace compliance footprint, 
+    preventing state blowup in dense network assemblies. -/
+noncomputable def NormalizedMetricTraceDensity (g_eff : Matrix N N ℝ) : ℝ :=
+  (Matrix.trace g_eff) / (Fintype.card N : ℝ)
+
 /-- Section XII-B (Eq. 3): The Dynamic Spatial Adjacency Operator. -/
 def DynamicSpatialAdjacency (κ : N → N → ℝ) (R : N → N → ℝ) (i j : N) : ℝ :=
   κ i j * R i j
@@ -31,23 +63,10 @@ theorem resonance_monotonicity
     (κ : ℝ) (hκ : 0 < κ) (R : N → N → ℝ) (i j k : N) 
     (h_res : R i j > R i k) :
     DynamicSpatialAdjacency (fun _ _ => κ) R i j > DynamicSpatialAdjacency (fun _ _ => κ) R i k := by
-  -- Unfold the spatial adjacency metric to expose the underlying multiplication structure
+  -- Unfold the spatial adjacency metric to expose the underlying multiplication
   unfold DynamicSpatialAdjacency
   -- Use real multiplication bounds to deduce the inequality from the positive coupling background
   exact mul_lt_mul_of_pos_left h_res hκ
-
-
-/-- Section XII-D (Eq. 7): The Instantaneous Phase Momentum Vector Field. -/
-noncomputable def PhaseMomentum (dphi : N → ℝ) : ℝ :=
-  (1 / (Fintype.card N : ℝ)) * ∑ i, dphi i
-
-/-- Definition: The emergent phase metric g_eff (Eq. 29) -/
-noncomputable def EmergentComplianceMetric 
-    (C : Matrix N N ℝ) 
-    (ε : ℝ) 
-    (_h_reg : ε > 0) : Matrix N N ℝ :=
-  let regularized_stiffness := C + ε • (1 : Matrix N N ℝ)
-  regularized_stiffness⁻¹
 
 -- Explicitly omit section variables to keep the linter completely silent
 omit [DecidableEq N] [Fintype N] in
@@ -97,7 +116,7 @@ theorem stiffness_from_overlap_functional
   rw [intervalIntegral.integral_const, sub_zero]
   -- Decompose the real part of the scalar integral tracking block
   have h_re_one : ((1 / T) • T • (1 : ℂ)).re = 1 := by
-    -- Simplify the real projection structures natively
+    -- Simplify the real projection natively
     simp only [one_div, real_smul, mul_one, ofReal_inv, mul_re, inv_re, ofReal_re, normSq_ofReal, div_self_mul_self', inv_im, ofReal_im, neg_zero, zero_div, mul_zero, sub_zero]
     -- Explicitly cancel out the inverted field elements (T⁻¹ * T = 1) using the horizon positivity parameter
     exact inv_mul_cancel₀ (ne_of_gt hT)
@@ -137,14 +156,6 @@ theorem compliance_metric_diagonal_bound (ε : ℝ) (h_ε : ε > 0) (d : N → �
   have h_le : ε ≤ d i + ε := by linarith [hd i]
   rw [inv_eq_one_div, inv_eq_one_div]
   exact div_le_div_of_nonneg_left (by norm_num) h_ε h_le
-
-/-- Section XII-G (Eq. 47): Define the Phase Velocity Gradient field. -/
-noncomputable def LocalPhaseVelocityGradient (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) : N → N → ℝ :=
-  fun i j => κ i j * Real.cos (ϕ t j - ϕ t i)
-
-/-- Section XII-G (Eq. 48): The Localized Phase Vorticity Tensor (Ω_ij). -/
-noncomputable def LocalPhaseVorticityTensor (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) : N → N → ℝ :=
-  fun i j => LocalPhaseVelocityGradient κ ϕ t i j - LocalPhaseVelocityGradient κ ϕ t j i
 
 omit [DecidableEq N] [Fintype N] in
 /--  Bounds on Phase Vorticity Magnitude.
@@ -212,13 +223,6 @@ theorem vorticity_tensor_gauge_invariance
   -- 2. Substitute the evaluated identities back into the matrix tensor
   rw [h_gauge1, h_gauge2]
 
-
-/-- Section XIV-G: The Endogenized Dynamic Compliance Floor Function.
-    Transitions ε from a static parameter into a state-dependent physical field 
-    driven by the Covariant Lyapunov Vector (CLV) hyper-angle (θ). -/
-noncomputable def ComplianceFloor (α : ℝ) (θ : ℝ) : ℝ :=
-  α * (Real.cos θ / Real.sin θ)
-
 omit [DecidableEq N] [Fintype N] in
 /-- Monotonicity of the Compliance Floor.
     Proves that as the stable and unstable dynamical pathways collapse together 
@@ -270,7 +274,7 @@ theorem compliance_floor_divergence_bounds (α : ℝ) (hα : 0 < α) (M : ℝ) (
       have h_cos_scale : α * (1 / 2) ≤ α * Real.cos θ := mul_le_mul_of_nonneg_left h_cos (by linarith)
       linarith
     linarith
-  -- 2. Flatten the nested parenthesis structure using Mathlib4's native mul_div lemma
+  -- 2. Flatten the nested parenthesis using Mathlib4's native mul_div lemma
   rw [mul_div]
   -- 3. Convert to fractional division form cleanly using the provided domain positivity
   rw [le_div_iff₀ h_sin_pos]
@@ -297,7 +301,7 @@ theorem compliance_metric_positivity
     (ε : ℝ) (h_ε : ε > 0) (d : N → ℝ) (hd : ∀ i, 0 ≤ d i) :
     ∀ i, 0 < ((diagonal (fun j => d j + ε))⁻¹ : Matrix N N ℝ) i i := by
   intro i
-  -- 1. Explicitly expand the target expression matrix sum structure
+  -- 1. Explicitly expand the target expression matrix sum
   have h_sum : (diagonal d + ε • (1 : Matrix N N ℝ)) = diagonal (fun j => d j + ε) := by
     ext j k
     by_cases h_jk : j = k
@@ -305,7 +309,7 @@ theorem compliance_metric_positivity
       simp only [Matrix.add_apply, diagonal_apply_eq, Matrix.smul_apply, one_apply_eq, smul_eq_mul, mul_one]
     · simp only [Matrix.add_apply, diagonal_apply_ne _ h_jk, Matrix.smul_apply, one_apply_ne h_jk, smul_eq_mul, mul_zero, add_zero]
   
-  -- 2. Compute the exact matrix inverse using your established diagonal inversion technique
+  -- 2. Compute the exact matrix inverse using diagonal inversion technique
   have h_inv : (diagonal (fun j => d j + ε))⁻¹ = diagonal (fun j => (d j + ε)⁻¹) := by
     apply Matrix.inv_eq_left_inv
     rw [diagonal_mul_diagonal]
@@ -352,12 +356,6 @@ theorem attractor_dimensionality_bounds (μ : N → ℝ) (Ω : ℝ) :
     -- Simplify the uniform sum of ones and clear out the scalar multiplication cleanly
     rw [Finset.sum_const, Finset.card_univ, nsmul_one] at h_sum
     exact h_sum
-
-/-- Section T-4: Macro-Statistical Metric Trace Density.
-    Computes the network-normalized average trace compliance footprint, 
-    preventing state blowup in dense network assemblies. -/
-noncomputable def NormalizedMetricTraceDensity (g_eff : Matrix N N ℝ) : ℝ :=
-  (Matrix.trace g_eff) / (Fintype.card N : ℝ)
 
 omit [DecidableEq N] in
 /-- THE CONTINUUM THERMODYNAMIC LIMIT RECONSTRUCTION

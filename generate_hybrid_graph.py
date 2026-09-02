@@ -3,7 +3,7 @@ import re
 
 source_dir = "PMADLean"
 files_to_scan = [f for f in os.listdir(source_dir) if f.endswith(".lean")]
-#NOTE: DONT USE `theorm` IN COMMENTS IN
+#NOTE: DONT USE ANY IN `decl_pattern` IN COMMENTS IN
 # Keep your exact pattern and blacklists completely untouched
 decl_pattern = re.compile(r'\b(?:theorem|lemma|def|structure|inductive)\s+([A-Za-z0-9_\.]+)')
 tactics_blacklist = {'have', 'rw', 'using', 'unfold', 'of', 'block'}
@@ -12,7 +12,9 @@ file_declarations = {}
 decl_to_full_id = {}
 def_nodes = set()          
 node_complexity = {}       
+cross_dependencies = {}
 
+# FIRST PASS: Extract declarations and pre-categorize trivial proofs based on file contents
 for filename in files_to_scan:
     module = filename.replace(".lean", "")
     path = os.path.join(source_dir, filename)
@@ -20,6 +22,8 @@ for filename in files_to_scan:
     
     with open(path, "r", encoding="utf-8") as f:
         content = f.read()
+        
+        # Populate declarations
         for match in decl_pattern.finditer(content):
             name = match.group(1)
             if name not in tactics_blacklist:
@@ -32,56 +36,42 @@ for filename in files_to_scan:
                 if any(match_text.startswith(kw) for kw in ['def', 'structure', 'inductive']):
                     def_nodes.add(full_id)
 
+        # FIX: Check if blocks contain simple termination tokens *before* rendering loop runs
+        blocks = re.split(r'\b(?:theorem|lemma|def|structure|inductive)\s+', content)
+        for block in blocks[1:]:
+            lines = block.strip().split("\n")
+            if not lines or not lines[0]:
+                continue
+            # FIX: Target strictly the first string item index in the code lines array slice
+            header_match = re.match(r'([A-Za-z0-9_\.]+)', lines[0])
+            if not header_match:
+                continue
+            src_short = header_match.group(1)
+            if src_short in tactics_blacklist:
+                continue
+            src_full = f"{module}_{src_short}"
+            
+            if src_full not in def_nodes:
+                body_lower = block.lower()
+                if 'rfl' in body_lower or 'le_refl' in body_lower:
+                    node_complexity[src_full] = "trivial"
+                else:
+                    node_complexity[src_full] = "heavy"
+
 # Establish visual grouping boxes to force readable vertical stacking
 module_meta = {
-    "Axioms": {"title": "Axioms.lean (Foundations)", "color": "#1e3a8a", "stroke": "#3b82f6"},
-    "Dynamics": {"title": "Dynamics.lean (Attractor Convergence)", "color": "#1e3a8a", "stroke": "#3b82f6"},
-    "Probability": {"title": "Probability.lean (Born Rule & Bounds)", "color": "#064e3b", "stroke": "#10b981"},
-    "Metrics": {"title": "Metrics.lean (Compliance Geometry)", "color": "#064e3b", "stroke": "#10b981"},
-    "Renormalization": {"title": "Renormalization.lean (Scale Decay)", "color": "#3f1dcb", "stroke": "#8b5cf6"},
-    "Vorticity": {"title": "Vorticity.lean (Spacetime Synthesis)", "color": "#7c2d12", "stroke": "#ea580c"},
-    "Incompleteness": {"title": "Incompleteness.lean (Decoupled Limits)", "color": "#451a03", "stroke": "#b45309"},
-    "Test": {"title": "Test.lean (spiral-vm runtime example)", "color": "#451a03", "stroke": "#b45309"}
+    "Axioms": {"title": "Axioms.lean (Foundations)"},
+    "Dynamics": {"title": "Dynamics.lean (Attractor Convergence)"},
+    "Probability": {"title": "Probability.lean (Born Rule & Bounds)"},
+    "Metrics": {"title": "Metrics.lean (Compliance Geometry)"},
+    "Renormalization": {"title": "Renormalization.lean (Scale Decay)"},
+    "Vorticity": {"title": "Vorticity.lean (Spacetime Synthesis)"},
+    "Incompleteness": {"title": "Incompleteness.lean (Decoupled Limits)"},
+    "Test": {"title": "Test.lean (spiral-vm runtime example)"},
+    "PhyslibBridge": {"title": "PhyslibBridge.lean (Show equivalence with Physlib)"}
 }
 
-mermaid_lines = [
-    "graph TD",
-    "    %% Scannable Layout Controls",
-    "    classDef default fill:#111827,stroke:#374151,stroke-width:1px,color:#e5e7eb;",
-    "    classDef heavyNode fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff;",
-    "    classDef trivialNode fill:#1f2937,stroke:#9ca3af,stroke-width:1px,color:#9ca3af;",
-    "    linkStyle default stroke:#4b5563,stroke-width:1px;"
-]
-
-heavy_node_ids = []
-trivial_node_ids = []
-
-# Generate clustered layout structural blocks
-for module, decls in file_declarations.items():
-    if not decls or module not in module_meta:
-        continue
-    meta = module_meta[module]
-    
-    mermaid_lines.append(f"\n    subgraph {module} [\"{meta['title']}\"]")
-    # Force interior theorems to align Left-to-Right within the vertical module block
-    mermaid_lines.append("        direction LR") 
-    for short_name, full_id in decls:
-        # Check if this node is a known structure/def or a proof type
-        if full_id in def_nodes:
-            mermaid_lines.append(f"        {full_id}(\"{short_name}\")") # Definitions get clean rounded capsules
-        else:
-            complexity = node_complexity.get(full_id, "heavy")
-            if complexity == "trivial":
-                mermaid_lines.append(f"        {full_id}[\"{short_name} ⟨id⟩\"]") # Simple proofs get gray tags
-                trivial_node_ids.append(full_id)
-            else:
-                mermaid_lines.append(f"        {full_id}[[\"{short_name} 🔥\"]]") # Stiff analytic proofs keep the fire stadium box
-                heavy_node_ids.append(full_id)
-    mermaid_lines.append("    end")
-    mermaid_lines.append(f"    style {module} fill:{meta['color']},stroke:{meta['stroke']},stroke-width:2px,color:#fff;")
-
 # Map edge connections cleanly
-seen_edges = set()
 for filename in files_to_scan:
     module = filename.replace(".lean", "")
     path = os.path.join(source_dir, filename)
@@ -94,9 +84,8 @@ for filename in files_to_scan:
     blocks = re.split(r'\b(?:theorem|lemma|def|structure|inductive)\s+', content)
     for block in blocks[1:]:
         lines = block.strip().split("\n")
-        if not lines:
+        if not lines or not lines[0]:
             continue
-        # BUG FIX: Target strictly the first string item index in the code lines array slice
         header_match = re.match(r'([A-Za-z0-9_\.]+)', lines[0])
         if not header_match:
             continue
@@ -106,14 +95,6 @@ for filename in files_to_scan:
             continue
         src_full = f"{module}_{src_short}"
         
-        # FIX: Check if the block contains simple termination tokens like rfl or le_refl
-        if src_full not in def_nodes:
-            body_lower = block.lower()
-            if 'rfl' in body_lower or 'le_refl' in body_lower:
-                node_complexity[src_full] = "trivial"
-            else:
-                node_complexity[src_full] = "heavy"
-        
         tokens = re.findall(r'\b([A-Za-z0-9_\.]+)\b', block)
         for token in tokens:
             if token in decl_to_full_id and token != src_short:
@@ -122,22 +103,62 @@ for filename in files_to_scan:
                 # Check for cross-module edge transformations
                 is_cross = token not in [d[0] for d in file_declarations[module]]
                 
-                # Make cross-module connections visually distinct and thicker
-                edge_style = " ==X-Module==> " if is_cross else " --> "
-                edge = f"    {src_full}{edge_style}{tgt_full}"
-                
-                if edge not in seen_edges:
-                    mermaid_lines.append(edge)
-                    seen_edges.add(edge)
+                if is_cross:
+                    tgt_module = tgt_full.split("_")[0]
+                    if src_full not in cross_dependencies:
+                        cross_dependencies[src_full] = []
+                    cross_dependencies[src_full].append(f"{tgt_module}.{token}")
 
-# Append specialized class mappings safely to the bottom of the line block array
-if heavy_node_ids:
-    mermaid_lines.append(f"    class {','.join(heavy_node_ids)} heavyNode;")
-if trivial_node_ids:
-    mermaid_lines.append(f"    class {','.join(trivial_node_ids)} trivialNode;")
+# Generate a high-scannability vertical layout output tree
+md_lines = [
+    "# 📐 Lean Project Architecture Map",
+    "Below is the strict verification architecture layout compiled directly from source code dependencies.",
+    "",
+]
+
+modules_order = ["Axioms", "Dynamics", "Probability", "Metrics", "Renormalization", "Vorticity", "Incompleteness", "Test", "PhyslibBridge"]
+existing_modules = [m for m in modules_order if m in file_declarations and file_declarations[m]]
+
+for idx, module in enumerate(existing_modules):
+    meta = module_meta[module]
+    decls = file_declarations[module]
+    
+    # Structural Visual Pipeline Header
+    if idx > 0:
+        md_lines.append("```text")
+        md_lines.append("       │")
+        md_lines.append("       ▼ [Cross-Module Dependency Pipeline]")
+        md_lines.append("```")
+        
+    md_lines.append(f"### 📦 {meta['title']}")
+    md_lines.append("<details open>")
+    md_lines.append(f"<summary><b>View Module Elements ({len(decls)} items)</b></summary>")
+    md_lines.append("")
+    
+    # Text-Based Visual Map Track inside the collapsible pane
+    md_lines.append("```text")
+    md_lines.append(f"┌─── [{module}.lean] ──────────────────────────────────────────────────┐")
+    for short_name, full_id in decls:
+        if full_id in def_nodes:
+            tag = "[DEF]"
+            icon = "⚙️"
+        else:
+            complexity = node_complexity.get(full_id, "heavy")
+            tag = "[TRIV]" if complexity == "trivial" else "[CORE]"
+            icon = "⬜" if complexity == "trivial" else "🔥"
+            
+        deps = cross_dependencies.get(full_id, [])
+        dep_track = f" ➔ Outbound to: {', '.join(deps)}" if deps else ""
+        
+        # Format a clean visual track row
+        md_lines.append(f"│  ├─ {icon} {tag:<6} {short_name:<30} {dep_track}")
+    md_lines.append(f"└──────────────────────────────────────────────────────────────────────┘")
+    md_lines.append("```")
+    md_lines.append("</details>")
+    md_lines.append("")
 
 with open("theorem_architecture.md", "w", encoding="utf-8") as out:
-    out.write("\n".join(mermaid_lines) + "\n")
+    out.write("\n".join(md_lines) + "\n")
 
-print("✔ Optimized high-scannability graph written to theorem_architecture.md")
+print("✔ Optimized high-scannability dashboard written to theorem_architecture.md")
 

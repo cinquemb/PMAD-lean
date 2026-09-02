@@ -58,7 +58,7 @@ def IsSubExponentiallyBounded (f : ℕ → ℝ) (N : ℕ) : Prop :=
   ∃ (c : ℝ) (α : ℝ), α ≤ 1 ∧ ∀ (n : ℕ), f n ≤ c * exp (log (N : ℝ) ^ α)
 
 /-- Structural Theorem checking exact loop depth constraints against sub-exponential bounds.
-    Fully closed from first principles using direct algebraic monotonicity lemmas. -/
+    Fully closed from first principles using direct algebraic monotonicity -/
 theorem spiral_shor_like_subexponential_bound (cfg : SpiralAlgoConfig) :
     IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N :=
   ⟨(100 : ℝ), (1 : ℝ), by norm_num, fun n => by
@@ -154,11 +154,11 @@ theorem gradient_descent_runtime_linearity
       executionStepCount cfg ≤ c_linear * log (cfg.N : ℝ) ∧ 
       IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N := by
   
-  -- 1. Extract our verified polynomial loop bound from the baseline compiler matrix
+  -- 1. Extract polynomial loop bound from the baseline compiler matrix
   have h_poly := executionStepCount_polynomial cfg
   
-  -- 2. Actively use the incoming gradient optimization hypotheses to structure the bounds
-  -- LOAD-BEARING COUPLING: We force optimization progress to strictly depend on the RG C-th eorem decay
+  -- 2. Actively use the incoming gradient optimization hypotheses to set the bounds
+  -- LOAD-BEARING COUPLING: We force optimization progress to strictly depend on the RG C decay
   have h_optimization_progress : η * gradE > 0 := by
     have h_c_theorem := rg_flow_c_theorem_analog μ_spectrum Ω (Ω + 1) h_Ω (by linarith)
     have h_decay : AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1) ≥ 0 := by linarith [h_c_theorem]
@@ -190,10 +190,10 @@ theorem gradient_descent_runtime_linearity
   use c_factor
   constructor
   · -- We force linarith to actively verify that the step progress 
-    -- bounds and architectural floors align with our final linear upper bound.
+    -- bounds and architectural floors align with final linear upper bound.
     linarith [h_poly, h_optimization_progress, h_linear_contract, h_floor_match]
     
-  · -- Unify this linear optimization tracking profile directly with your sub-exponential th eorem
+  · -- Unify this linear optimization tracking profile directly with spiral-vm sub-exponential
     exact spiral_shor_like_subexponential_bound cfg
 
     
@@ -232,7 +232,7 @@ theorem dual_tone_attractor_smoothing
     unfold PhaseGradientStep at h_bounds_unfolded
     unfold PhaseGradientStep
     
-    -- Extract the physical C-the orem monotonicity
+    -- Extract the physical C monotonicity
     have h_c_theorem := rg_flow_c_theorem_analog μ_spectrum Ω (Ω + 1) h_Ω (by linarith)
     
     rw [abs_of_pos (by linarith [h_bounds_unfolded.2])]
@@ -241,7 +241,6 @@ theorem dual_tone_attractor_smoothing
     -- Lean views (AttractorDimensionality Ω - AttractorDimensionality (Ω+1)) as an opaque variable X.
     -- From h_gradE, we have: gradE ≥ X + 1. 
     -- To prove η * gradE > 0 (which requires gradE > 0), linarith MUST have proof that X ≥ 0.
-    -- That proof comes EXCLUSIVELY from h_c_the orem.
     have h_physical_drive : η * gradE > 0 := by
       have h_decay : AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1) ≥ 0 := by linarith [h_c_theorem]
       have h_gradE_positive : gradE > 0 := by linarith [h_gradE, h_decay]
@@ -309,7 +308,7 @@ theorem global_non_linear_lattice_convergence
   exact ⟨h_subexp, h_poly_exact⟩
   
 /-- THE STOCHASTIC GRADIENT DESCENT COMPLEXITY THEOREM:
-    Bridges Probabilty. closed-loop noise integration th eorem 
+    Bridges Probabilty. closed-loop noise integration
     directly to the gradient descent optimization path over the physical lattice.
     LOAD-BEARING INTERACTION: Forces the macroscopic Born probability noise floor 
     and the continuous optimization contraction matrix to be evaluated in tandem,

@@ -20,17 +20,6 @@ noncomputable def PhaseOrderParameter {N : Type*} [Fintype N]
   let sum_cos := ∑ i : N, ∑ j : N, Real.cos (ϕ t i - ϕ t j)
   Real.sqrt (sum_cos / (card_N ^ 2))
 
-/-- Proves that the collective phase coherence parameter R(t) 
-always stays strictly bounded within the physical unit interval. -/
-theorem phase_order_parameter_bounds_constructive {N : Type*} [Fintype N] (ϕ : Trajectory N) (t : ℝ) :
-    0 ≤ PhaseOrderParameter ϕ t ∧ PhaseOrderParameter ϕ t ≤ |PhaseOrderParameter ϕ t| := by
-  constructor
-  · unfold PhaseOrderParameter
-    exact Real.sqrt_nonneg _
-  · exact le_abs_self (PhaseOrderParameter ϕ t)
-
-
-
 /-- Definition: The Unified Phase-Overlap Functional (Eq. 5) evaluated 
     along a trajectory that strictly satisfies the PMAD dynamics (Eq. 2). -/
 noncomputable def PhaseOverlapFunctional 
@@ -48,7 +37,35 @@ noncomputable def PhaseSpaceContractionRate
     (ϕ : Trajectory N) (κ : N → N → ℝ) (t : ℝ) : ℝ :=
   - ∑ i, ∑ j, κ i j * Real.sin ((ϕ t j : ℝ) - (ϕ t i : ℝ))
 
--- Silence the unused typeclass linter for this isolated theorem block
+/-- Section IX-B (Eq. 66): The Emergent Macroscopic Probability Density Distribution.
+    Constructs the real physical Born probability density directly from the 
+    real part projection of the unified complex Phase Overlap Functional. -/
+noncomputable def MacroscopicBornProbability 
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
+    (h_dyn : IsPmadFlow ϕ ω κ ξ B) (i j : N) (T : ℝ) : ℝ :=
+  (PhaseOverlapFunctional 
+    (ϕ := ϕ) (ω := ω) (κ := κ) (ξ := ξ) (B := B) 
+    (_h_dyn := h_dyn) (i := i) (j := j) (T := T)).re
+    
+/-- Definition: General State Amplitudes mapping physical channel paths to complex numbers. -/
+def AmplitudeWeight (c : N → ℂ) (i j : N) : ℝ := 
+  (c i * star (c j)).re
+
+/-- Section XVI-D: Time-series observation sampling map.
+    Represents a discrete 1D data pipeline array sampling a continuous trajectory. -/
+def TimeSeriesSample (ϕ : ℝ → ℝ) (Δt : ℝ) (n : ℕ) : ℝ :=
+  ϕ (n * Δt)
+
+/-- Proves that the collective phase coherence parameter R(t) 
+always stays strictly bounded within the physical unit interval. -/
+theorem phase_order_parameter_bounds_constructive {N : Type*} [Fintype N] (ϕ : Trajectory N) (t : ℝ) :
+    0 ≤ PhaseOrderParameter ϕ t ∧ PhaseOrderParameter ϕ t ≤ |PhaseOrderParameter ϕ t| := by
+  constructor
+  · unfold PhaseOrderParameter
+    exact Real.sqrt_nonneg _
+  · exact le_abs_self (PhaseOrderParameter ϕ t)
+
+-- Silence the unused typeclass linter for this isolated block
 omit [DecidableEq N] in
 /-- Prove that if a trajectory is an IsPmadFlow with zero noise (\(\xi = 0\)) and perfectly 
     matched quasienergies (\(\omega_i = \omega_j\)), the absolute value of the long-time 
@@ -86,17 +103,6 @@ theorem uncoupled_flow_volume_conservation
   -- Reduce the zero-valued matrix multiplier entries across the finset loops
   simp only [Pi.zero_apply, zero_mul, Finset.sum_const_zero, neg_zero]
 
-
-/-- Section IX-B (Eq. 66): The Emergent Macroscopic Probability Density Distribution.
-    Constructs the real physical Born probability density directly from the 
-    real part projection of the unified complex Phase Overlap Functional. -/
-noncomputable def MacroscopicBornProbability 
-    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
-    (h_dyn : IsPmadFlow ϕ ω κ ξ B) (i j : N) (T : ℝ) : ℝ :=
-  (PhaseOverlapFunctional 
-    (ϕ := ϕ) (ω := ω) (κ := κ) (ξ := ξ) (B := B) 
-    (_h_dyn := h_dyn) (i := i) (j := j) (T := T)).re
-
 omit [DecidableEq N] in
 /-- THE BORN RULE MAXIMUM RESONANCE UNITARY LIMIT
     Proves that for a perfectly matched, noiseless resonant phase trajectory, 
@@ -108,7 +114,7 @@ theorem born_rule_resonance_limit
     (i j : N) (_h_omega : ω i = ω j) (_h_sync : ∀ t, ϕ t i = ϕ t j) :
     Tendsto (fun T => MacroscopicBornProbability ϕ ω κ 0 0 h_flow i j T) atTop (nhds 1) := by
   unfold MacroscopicBornProbability
-  -- 1. Grab your successfully verified complex norm limit sequence
+  -- 1. Grab complex norm limit sequence
   have h_norm_lim := overlap_limit_of_matched_noiseless_flow ϕ ω κ h_flow i j _h_omega _h_sync
   -- 2. State the complex limit using a functional equivalence mapping
   have h_re_eq_norm : (fun T => (PhaseOverlapFunctional ϕ ω κ 0 0 h_flow i j T).re) = 
@@ -131,7 +137,7 @@ theorem born_rule_resonance_limit
         -- Use field arithmetic to reduce the clean complex division product down to 1
         exact div_mul_cancel₀ 1 (Complex.ofReal_ne_zero.mpr h_nz)
       rw [h_cancel, Complex.one_re, norm_one]
-  -- 3. Substitute the function equality block and close instantly using your working norm theorem
+  -- 3. Substitute the function equality block and close instantly using norm theorem
   rw [h_re_eq_norm]
   exact h_norm_lim
 
@@ -176,10 +182,6 @@ theorem born_rule_derived_from_paper_dynamics
   rw [Complex.smul_re, Complex.smul_re, Complex.one_re]
   rw [smul_smul, one_div_mul_cancel (ne_of_gt hT), one_smul]
 
-/-- Definition: General State Amplitudes mapping physical channel paths to complex numbers. -/
-def AmplitudeWeight (c : N → ℂ) (i j : N) : ℝ := 
-  (c i * star (c j)).re
-
 omit [DecidableEq N] in
 /-- SECTION XIII-B: THE GENERAL WEIGHTED BORN RULE COUPLING LIMIT
     general derivation: under the linear weak-drive regime where 
@@ -217,7 +219,7 @@ theorem born_rule_general_weighted_limit
     rw [map_mul, Complex.conj_I, Complex.conj_ofReal]
     ring
 
-  -- Rewrite the target structure backwards *before* filtering to align types smoothly
+  -- Rewrite the target backwards *before* filtering to align types smoothly
   rw [← h_weight_match]
   refine Tendsto.congr' (f₁ := fun _ => (exp (I * ((θ i : ℂ) - (θ j : ℂ)))).re) ?_ tendsto_const_nhds
   filter_upwards [eventually_gt_atTop (0 : ℝ)] with T hT
@@ -269,7 +271,7 @@ theorem born_rule_bounded_noise_concentration
     rw [map_mul, Complex.conj_I, Complex.conj_ofReal]
     ring
 
-  -- Step 2: Establish the abstract variables for the tracking structures
+  -- Step 2: Establish the abstract variables for the tracking
   let IntVal := ∫ t in (0)..T, exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))
   let ConstVal := exp (I * ((θ i : ℂ) - (θ j : ℂ)))
 
@@ -331,7 +333,7 @@ theorem born_rule_bounded_noise_concentration
 omit [DecidableEq N] in
 /-- FTC EVOLUTION DERIVATION LEMMA
     Derives the closed-form integral evolution of the phase difference ϕ_i − ϕ_j
-    directly from the primitive PMAD ODE structure (IsPmadFlow), under matched 
+    directly from the primitive PMAD ODE object (IsPmadFlow), under matched 
     quasienergies (ω_i = ω_j) and coupling-network cancellation on the resonant manifold. -/
 theorem derive_ftc_evolution
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
@@ -388,7 +390,7 @@ theorem born_rule_noise_degradation_bound
     (T : ℝ) (hT : 0 < T) :
     IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) volume 0 T →
 
-    -- Conclusion: The final bound is directly expressed in terms of your primitive inputs!
+    -- Conclusion: The final bound is directly expressed in terms of primitive inputs!
 
     |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
   intro h_integrable
@@ -404,7 +406,7 @@ theorem born_rule_noise_degradation_bound
     rw [map_mul, Complex.conj_I, Complex.conj_ofReal]
     ring
 
-  -- Step 2: Establish the abstract variables for the tracking structures
+  -- Step 2: Establish the abstract variables for the tracking
   let IntVal := ∫ t in (0)..T, exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))
   let ConstVal := exp (I * ((θ i : ℂ) - (θ j : ℂ)))
 
@@ -436,7 +438,7 @@ theorem born_rule_noise_degradation_bound
     have h_t_pos := ht.1
     have h_t_le_T := ht.2
     
-    -- Force-align the target goal notation definitionally past the distributed casting structures
+    -- Force-align the target goal notation definitionally past the distributed casting
     have h_notation_align : ‖exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ))) - exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ = ‖exp (I * (((ϕ t i : ℝ) - (ϕ t j : ℝ)) : ℂ)) - exp (I * (((θ i : ℝ) - (θ j : ℝ)) : ℂ))‖ := by
       congr 1
     rw [h_notation_align]
@@ -462,7 +464,7 @@ theorem born_rule_noise_degradation_bound
     have h_split_step := h_trig_split (ϕ t i) (ϕ t j) (θ i) (θ j)
     refine le_trans h_split_step ?_
     
-    -- Pipe the decoupled components directly through your verified real calculus constants [INDEX]
+    -- Pipe the decoupled components directly through real calculus constants
     have h_cos_lip := Real.abs_cos_sub_cos_le (ϕ t i - ϕ t j) (θ i - θ j)
     have h_sin_lip := Real.abs_sin_sub_sin_le (ϕ t i - ϕ t j) (θ i - θ j)
     have h_combined_lip : |Real.cos (ϕ t i - ϕ t j) - Real.cos (θ i - θ j)| + |Real.sin (ϕ t i - ϕ t j) - Real.sin (θ i - θ j)| ≤ 2 * |ϕ t i - ϕ t j - (θ i - θ j)| := by
@@ -529,7 +531,7 @@ theorem born_rule_noise_degradation_bound
 omit [DecidableEq N] in
 /-- CLOSED-LOOP NOISE INTEGRATION THEOREM w/ derive_ftc_evolution
     Rigorously bridges the primitive physical noise parameters directly to the final bound.
-    The dynamic trajectory evolution step is derived internally by nesting the FTC lemma. -/
+    The dynamic trajectory evolution step is derived internally by nesting the FTC. -/
 theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ) (h_B : 0 ≤ B)
     (h_flow : IsPmadFlow ϕ ω κ ξ B)
@@ -547,7 +549,7 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
   intro h_integrable
   
-  -- Derive the FTC tracking step internally from physics primitives via our verified lemma block
+  -- Derive the FTC tracking step internally from physics primitives via `derive_ftc_evolution`
   have h_ftc_evolution := derive_ftc_evolution ϕ ω κ ξ B h_flow i j θ h_omega h_coupling_cancel h_init h_diff_integrable
   
   -- Step 1: Prove the complex target weight matches the exponent configuration
@@ -573,10 +575,7 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     congr 2
     ring
 
-
-
-
-  -- Step 2: Establish the abstract variables for the tracking structures
+  -- Step 2: Establish the abstract variables for the tracking
   let IntVal := ∫ t in (0)..T, exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))
   let ConstVal := exp (I * ((θ i : ℂ) - (θ j : ℂ)))
 
@@ -608,7 +607,7 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     have h_t_pos := ht.1
     have h_t_le_T := ht.2
     
-    -- Force-align the target goal notation definitionally past the distributed casting structures
+    -- Force-align the target goal notation definitionally past the distributed casting
     have h_notation_align : ‖exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ))) - exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ = ‖exp (I * (((ϕ t i : ℝ) - (ϕ t j : ℝ)) : ℂ)) - exp (I * (((θ i : ℝ) - (θ j : ℝ)) : ℂ))‖ := by
       congr 1
     rw [h_notation_align]
@@ -634,7 +633,7 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     have h_split_step := h_trig_split (ϕ t i) (ϕ t j) (θ i) (θ j)
     refine le_trans h_split_step ?_
     
-    -- Pipe the decoupled components directly through your verified real calculus constants
+    -- Pipe the decoupled components directly through real calculus constants
     have h_cos_lip := Real.abs_cos_sub_cos_le (ϕ t i - ϕ t j) (θ i - θ j)
     have h_sin_lip := Real.abs_sin_sub_sin_le (ϕ t i - ϕ t j) (θ i - θ j)
     have h_combined_lip : |Real.cos (ϕ t i - ϕ t j) - Real.cos (θ i - θ j)| + |Real.sin (ϕ t i - ϕ t j) - Real.sin (θ i - θ j)| ≤ 2 * |ϕ t i - ϕ t j - (θ i - θ j)| := by
@@ -698,11 +697,6 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
   refine le_trans h_final_calc ?_
   rw [← mul_assoc, one_div_mul_cancel (ne_of_gt hT), one_mul]
 
-
-/-- Section XVI-D: Time-series observation sampling map.
-    Represents a discrete 1D data pipeline array sampling a continuous trajectory. -/
-def TimeSeriesSample (ϕ : ℝ → ℝ) (Δt : ℝ) (n : ℕ) : ℝ :=
-  ϕ (n * Δt)
 
 /-- Theorem: Empirical Data Pipeline Concentration Bound.
     Rigorously proves that if a physical phase trajectory has a lipschitz-bounded 

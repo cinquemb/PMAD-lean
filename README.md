@@ -21,272 +21,234 @@ This library codifies the theoretical foundations presented in the companion man
 
 Below is the strict dependency architecture certified by the Lean compiler kernel. Rather than isolating individual definitions, this pipeline maps the actual **logical transport arrows** from micro phase axioms down to macroscopic spacetime geometries:
 
-```mermaid
-graph TD
-    %% Scannable Layout Controls
-    classDef default fill:#111827,stroke:#374151,stroke-width:1px,color:#e5e7eb;
-    classDef heavyNode fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff;
-    classDef trivialNode fill:#1f2937,stroke:#9ca3af,stroke-width:1px,color:#9ca3af;
-    linkStyle default stroke:#4b5563,stroke-width:1px;
+### 📦 Axioms.lean (Foundations)
+<details open>
+<summary><b>View Module Elements (5 items)</b></summary>
 
-    subgraph Probability ["Probability.lean (Born Rule & Bounds)"]
-        direction LR
-        Probability_PhaseOrderParameter("PhaseOrderParameter")
-        Probability_phase_order_parameter_bounds_constructive[["phase_order_parameter_bounds_constructive 🔥"]]
-        Probability_PhaseOverlapFunctional("PhaseOverlapFunctional")
-        Probability_PhaseSpaceContractionRate("PhaseSpaceContractionRate")
-        Probability_overlap_limit_of_matched_noiseless_flow[["overlap_limit_of_matched_noiseless_flow 🔥"]]
-        Probability_uncoupled_flow_volume_conservation[["uncoupled_flow_volume_conservation 🔥"]]
-        Probability_MacroscopicBornProbability("MacroscopicBornProbability")
-        Probability_born_rule_resonance_limit[["born_rule_resonance_limit 🔥"]]
-        Probability_born_rule_derived_from_paper_dynamics[["born_rule_derived_from_paper_dynamics 🔥"]]
-        Probability_AmplitudeWeight("AmplitudeWeight")
-        Probability_born_rule_general_weighted_limit[["born_rule_general_weighted_limit 🔥"]]
-        Probability_backwards("backwards")
-        Probability_born_rule_bounded_noise_concentration[["born_rule_bounded_noise_concentration 🔥"]]
-        Probability_derive_ftc_evolution[["derive_ftc_evolution 🔥"]]
-        Probability_born_rule_noise_degradation_bound[["born_rule_noise_degradation_bound 🔥"]]
-        Probability_born_rule_noise_degradation_bound_derive_ftc_evolution[["born_rule_noise_degradation_bound_derive_ftc_evolution 🔥"]]
-        Probability_TimeSeriesSample("TimeSeriesSample")
-        Probability_data_pipeline_discretization_bound[["data_pipeline_discretization_bound 🔥"]]
-    end
-    style Probability fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff;
-
-    subgraph Renormalization ["Renormalization.lean (Scale Decay)"]
-        direction LR
-        Renormalization_AttractorDimensionalityRGFlow("AttractorDimensionalityRGFlow")
-        Renormalization_rg_flow_monotonicity[["rg_flow_monotonicity 🔥"]]
-        Renormalization_rg_flow_ir_fixed_point[["rg_flow_ir_fixed_point 🔥"]]
-        Renormalization_compliance_floor_bounds_rg_spectrum[["compliance_floor_bounds_rg_spectrum 🔥"]]
-        Renormalization_dynamics_to_renormalization_capacity_bound[["dynamics_to_renormalization_capacity_bound 🔥"]]
-        Renormalization_rg_flow_finite_monotonicity[["rg_flow_finite_monotonicity 🔥"]]
-        Renormalization_rg_flow_uv_bounds[["rg_flow_uv_bounds 🔥"]]
-        Renormalization_rg_flow_component_bounds[["rg_flow_component_bounds 🔥"]]
-        Renormalization_rg_flow_c_theorem_analog[["rg_flow_c_theorem_analog 🔥"]]
-    end
-    style Renormalization fill:#3f1dcb,stroke:#8b5cf6,stroke-width:2px,color:#fff;
-
-    subgraph Incompleteness ["Incompleteness.lean (Decoupled Limits)"]
-        direction LR
-        Incompleteness_FullPhaseSpace("FullPhaseSpace")
-        Incompleteness_EmergentEffectiveForce("EmergentEffectiveForce")
-        Incompleteness_VisibleSubmanifoldEvolution("VisibleSubmanifoldEvolution")
-        Incompleteness_visible_submanifold_decoupling_limit[["visible_submanifold_decoupling_limit 🔥"]]
-    end
-    style Incompleteness fill:#451a03,stroke:#b45309,stroke-width:2px,color:#fff;
-
-    subgraph Vorticity ["Vorticity.lean (Spacetime Synthesis)"]
-        direction LR
-        Vorticity_MacroscopicPhaseCurrent("MacroscopicPhaseCurrent")
-        Vorticity_PhaseVelocityGradient("PhaseVelocityGradient")
-        Vorticity_PhaseVorticityTensor("PhaseVorticityTensor")
-        Vorticity_UnifiedMacroscopicSpacetimeMetricDim("UnifiedMacroscopicSpacetimeMetricDim")
-        Vorticity_vorticity_tensor_antisymmetric[["vorticity_tensor_antisymmetric 🔥"]]
-        Vorticity_LocalFrameDraggingVector("LocalFrameDraggingVector")
-        Vorticity_FrameDraggingMetricComponent("FrameDraggingMetricComponent")
-        Vorticity_UnifiedMacroscopicSpacetimeMetric("UnifiedMacroscopicSpacetimeMetric")
-        Vorticity_SynthesizedSpacetimeMetric1("SynthesizedSpacetimeMetric1")
-        Vorticity_SynthesizedSpacetimeMetricDim("SynthesizedSpacetimeMetricDim")
-        Vorticity_compliance_floor_prevents_spacetime_singularity[["compliance_floor_prevents_spacetime_singularity 🔥"]]
-        Vorticity_TransportArrow("TransportArrow")
-        Vorticity_transport_arrow_composition[["transport_arrow_composition 🔥"]]
-        Vorticity_pmad_unification_censorship[["pmad_unification_censorship 🔥"]]
-        Vorticity_pmad_unification_censorship_dim[["pmad_unification_censorship_dim 🔥"]]
-        Vorticity_phase_space_occupation_density_sum_bound[["phase_space_occupation_density_sum_bound 🔥"]]
-        Vorticity_pmad_unification_censorship_dim_alltime[["pmad_unification_censorship_dim_alltime 🔥"]]
-        Vorticity_macroscopic_geodesic_completeness_invariant[["macroscopic_geodesic_completeness_invariant 🔥"]]
-    end
-    style Vorticity fill:#7c2d12,stroke:#ea580c,stroke-width:2px,color:#fff;
-
-    subgraph Axioms ["Axioms.lean (Foundations)"]
-        direction LR
-        Axioms_PhaseState("PhaseState")
-        Axioms_Trajectory("Trajectory")
-        Axioms_AttractorSet("AttractorSet")
-        Axioms_IsDynamicallyStable("IsDynamicallyStable")
-        Axioms_UbiquitousResonance("UbiquitousResonance")
-    end
-    style Axioms fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff;
-
-    subgraph Metrics ["Metrics.lean (Compliance Geometry)"]
-        direction LR
-        Metrics_AttractorDimensionality("AttractorDimensionality")
-        Metrics_DynamicSpatialAdjacency("DynamicSpatialAdjacency")
-        Metrics_resonance_monotonicity[["resonance_monotonicity 🔥"]]
-        Metrics_PhaseMomentum("PhaseMomentum")
-        Metrics_EmergentComplianceMetric("EmergentComplianceMetric")
-        Metrics_spatial_locality_collapse[["spatial_locality_collapse 🔥"]]
-        Metrics_metric_singularity_censorship[["metric_singularity_censorship 🔥"]]
-        Metrics_stiffness_from_overlap_functional[["stiffness_from_overlap_functional 🔥"]]
-        Metrics_compliance_metric_diagonal_bound[["compliance_metric_diagonal_bound 🔥"]]
-        Metrics_LocalPhaseVelocityGradient("LocalPhaseVelocityGradient")
-        Metrics_LocalPhaseVorticityTensor("LocalPhaseVorticityTensor")
-        Metrics_vorticity_tensor_magnitude_bound[["vorticity_tensor_magnitude_bound 🔥"]]
-        Metrics_vorticity_tensor_translational_invariance[["vorticity_tensor_translational_invariance 🔥"]]
-        Metrics_vorticity_tensor_gauge_invariance[["vorticity_tensor_gauge_invariance 🔥"]]
-        Metrics_ComplianceFloor("ComplianceFloor")
-        Metrics_compliance_floor_monotonicity[["compliance_floor_monotonicity 🔥"]]
-        Metrics_compliance_floor_divergence_bounds[["compliance_floor_divergence_bounds 🔥"]]
-        Metrics_coordinate_independence[["coordinate_independence 🔥"]]
-        Metrics_compliance_metric_positivity[["compliance_metric_positivity 🔥"]]
-        Metrics_attractor_dimensionality_bounds[["attractor_dimensionality_bounds 🔥"]]
-        Metrics_NormalizedMetricTraceDensity("NormalizedMetricTraceDensity")
-        Metrics_thermodynamic_density_regularity_bound[["thermodynamic_density_regularity_bound 🔥"]]
-    end
-    style Metrics fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff;
-
-    subgraph Dynamics ["Dynamics.lean (Attractor Convergence)"]
-        direction LR
-        Dynamics_IsPmadFlow("IsPmadFlow")
-        Dynamics_IsAdmissibleAttractor("IsAdmissibleAttractor")
-        Dynamics_PhaseFlowDerivative("PhaseFlowDerivative")
-        Dynamics_PhaseSpaceOccupationDensity("PhaseSpaceOccupationDensity")
-        Dynamics_pmad_flow_converges_to_attractor[["pmad_flow_converges_to_attractor 🔥"]]
-        Dynamics_global_phase_gauge_invariance[["global_phase_gauge_invariance 🔥"]]
-        Dynamics_stability_under_bounded_perturbations[["stability_under_bounded_perturbations 🔥"]]
-    end
-    style Dynamics fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff;
-    Probability_PhaseOrderParameter ==X-Module==> Axioms_Trajectory
-    Probability_phase_order_parameter_bounds_constructive ==X-Module==> Axioms_Trajectory
-    Probability_phase_order_parameter_bounds_constructive --> Probability_PhaseOrderParameter
-    Probability_PhaseOverlapFunctional ==X-Module==> Axioms_Trajectory
-    Probability_PhaseOverlapFunctional ==X-Module==> Dynamics_IsPmadFlow
-    Probability_PhaseSpaceContractionRate ==X-Module==> Axioms_Trajectory
-    Probability_overlap_limit_of_matched_noiseless_flow ==X-Module==> Axioms_Trajectory
-    Probability_overlap_limit_of_matched_noiseless_flow ==X-Module==> Dynamics_IsPmadFlow
-    Probability_overlap_limit_of_matched_noiseless_flow --> Probability_PhaseOverlapFunctional
-    Probability_uncoupled_flow_volume_conservation ==X-Module==> Axioms_Trajectory
-    Probability_uncoupled_flow_volume_conservation --> Probability_PhaseSpaceContractionRate
-    Probability_MacroscopicBornProbability ==X-Module==> Axioms_Trajectory
-    Probability_MacroscopicBornProbability ==X-Module==> Dynamics_IsPmadFlow
-    Probability_MacroscopicBornProbability --> Probability_PhaseOverlapFunctional
-    Probability_born_rule_resonance_limit ==X-Module==> Axioms_Trajectory
-    Probability_born_rule_resonance_limit ==X-Module==> Dynamics_IsPmadFlow
-    Probability_born_rule_resonance_limit --> Probability_MacroscopicBornProbability
-    Probability_born_rule_resonance_limit --> Probability_overlap_limit_of_matched_noiseless_flow
-    Probability_born_rule_resonance_limit --> Probability_PhaseOverlapFunctional
-    Probability_born_rule_derived_from_paper_dynamics ==X-Module==> Axioms_Trajectory
-    Probability_born_rule_derived_from_paper_dynamics ==X-Module==> Dynamics_IsPmadFlow
-    Probability_born_rule_derived_from_paper_dynamics --> Probability_MacroscopicBornProbability
-    Probability_born_rule_derived_from_paper_dynamics --> Probability_PhaseOverlapFunctional
-    Probability_born_rule_general_weighted_limit ==X-Module==> Axioms_Trajectory
-    Probability_born_rule_general_weighted_limit ==X-Module==> Dynamics_IsPmadFlow
-    Probability_born_rule_general_weighted_limit --> Probability_MacroscopicBornProbability
-    Probability_born_rule_general_weighted_limit --> Probability_AmplitudeWeight
-    Probability_born_rule_general_weighted_limit --> Probability_PhaseOverlapFunctional
-    Probability_born_rule_bounded_noise_concentration ==X-Module==> Axioms_Trajectory
-    Probability_born_rule_bounded_noise_concentration ==X-Module==> Dynamics_IsPmadFlow
-    Probability_born_rule_bounded_noise_concentration --> Probability_MacroscopicBornProbability
-    Probability_born_rule_bounded_noise_concentration --> Probability_AmplitudeWeight
-    Probability_born_rule_bounded_noise_concentration --> Probability_PhaseOverlapFunctional
-    Probability_derive_ftc_evolution ==X-Module==> Axioms_Trajectory
-    Probability_derive_ftc_evolution ==X-Module==> Dynamics_IsPmadFlow
-    Probability_born_rule_noise_degradation_bound ==X-Module==> Axioms_Trajectory
-    Probability_born_rule_noise_degradation_bound ==X-Module==> Dynamics_IsPmadFlow
-    Probability_born_rule_noise_degradation_bound --> Probability_MacroscopicBornProbability
-    Probability_born_rule_noise_degradation_bound --> Probability_AmplitudeWeight
-    Probability_born_rule_noise_degradation_bound --> Probability_PhaseOverlapFunctional
-    Probability_born_rule_noise_degradation_bound --> Probability_derive_ftc_evolution
-    Probability_born_rule_noise_degradation_bound_derive_ftc_evolution ==X-Module==> Axioms_Trajectory
-    Probability_born_rule_noise_degradation_bound_derive_ftc_evolution ==X-Module==> Dynamics_IsPmadFlow
-    Probability_born_rule_noise_degradation_bound_derive_ftc_evolution --> Probability_MacroscopicBornProbability
-    Probability_born_rule_noise_degradation_bound_derive_ftc_evolution --> Probability_AmplitudeWeight
-    Probability_data_pipeline_discretization_bound --> Probability_TimeSeriesSample
-    Renormalization_rg_flow_monotonicity --> Renormalization_AttractorDimensionalityRGFlow
-    Renormalization_rg_flow_ir_fixed_point ==X-Module==> Metrics_AttractorDimensionality
-    Renormalization_compliance_floor_bounds_rg_spectrum ==X-Module==> Metrics_EmergentComplianceMetric
-    Renormalization_compliance_floor_bounds_rg_spectrum ==X-Module==> Metrics_metric_singularity_censorship
-    Renormalization_compliance_floor_bounds_rg_spectrum ==X-Module==> Metrics_AttractorDimensionality
-    Renormalization_dynamics_to_renormalization_capacity_bound ==X-Module==> Dynamics_IsAdmissibleAttractor
-    Renormalization_dynamics_to_renormalization_capacity_bound ==X-Module==> Metrics_AttractorDimensionality
-    Renormalization_rg_flow_finite_monotonicity ==X-Module==> Metrics_AttractorDimensionality
-    Renormalization_rg_flow_uv_bounds ==X-Module==> Metrics_AttractorDimensionality
-    Renormalization_rg_flow_c_theorem_analog ==X-Module==> Metrics_AttractorDimensionality
-    Renormalization_rg_flow_c_theorem_analog --> Renormalization_rg_flow_finite_monotonicity
-    Incompleteness_visible_submanifold_decoupling_limit --> Incompleteness_VisibleSubmanifoldEvolution
-    Incompleteness_visible_submanifold_decoupling_limit --> Incompleteness_EmergentEffectiveForce
-    Vorticity_PhaseVelocityGradient ==X-Module==> Axioms_Trajectory
-    Vorticity_PhaseVorticityTensor ==X-Module==> Axioms_Trajectory
-    Vorticity_PhaseVorticityTensor --> Vorticity_PhaseVelocityGradient
-    Vorticity_vorticity_tensor_antisymmetric ==X-Module==> Axioms_Trajectory
-    Vorticity_vorticity_tensor_antisymmetric --> Vorticity_PhaseVorticityTensor
-    Vorticity_LocalFrameDraggingVector ==X-Module==> Axioms_Trajectory
-    Vorticity_LocalFrameDraggingVector --> Vorticity_PhaseVorticityTensor
-    Vorticity_SynthesizedSpacetimeMetric1 ==X-Module==> Axioms_Trajectory
-    Vorticity_SynthesizedSpacetimeMetric1 --> Vorticity_PhaseVorticityTensor
-    Vorticity_SynthesizedSpacetimeMetric1 ==X-Module==> Probability_PhaseOrderParameter
-    Vorticity_SynthesizedSpacetimeMetric1 ==X-Module==> Metrics_AttractorDimensionality
-    Vorticity_SynthesizedSpacetimeMetric1 ==X-Module==> Dynamics_PhaseSpaceOccupationDensity
-    Vorticity_SynthesizedSpacetimeMetric1 --> Vorticity_UnifiedMacroscopicSpacetimeMetric
-    Vorticity_SynthesizedSpacetimeMetricDim ==X-Module==> Axioms_Trajectory
-    Vorticity_SynthesizedSpacetimeMetricDim --> Vorticity_PhaseVorticityTensor
-    Vorticity_SynthesizedSpacetimeMetricDim ==X-Module==> Probability_PhaseOrderParameter
-    Vorticity_SynthesizedSpacetimeMetricDim ==X-Module==> Metrics_AttractorDimensionality
-    Vorticity_SynthesizedSpacetimeMetricDim ==X-Module==> Dynamics_PhaseSpaceOccupationDensity
-    Vorticity_SynthesizedSpacetimeMetricDim --> Vorticity_UnifiedMacroscopicSpacetimeMetricDim
-    Vorticity_compliance_floor_prevents_spacetime_singularity --> Vorticity_UnifiedMacroscopicSpacetimeMetric
-    Vorticity_transport_arrow_composition --> Vorticity_TransportArrow
-    Vorticity_pmad_unification_censorship ==X-Module==> Axioms_Trajectory
-    Vorticity_pmad_unification_censorship ==X-Module==> Dynamics_IsAdmissibleAttractor
-    Vorticity_pmad_unification_censorship --> Vorticity_SynthesizedSpacetimeMetric1
-    Vorticity_pmad_unification_censorship --> Vorticity_UnifiedMacroscopicSpacetimeMetric
-    Vorticity_pmad_unification_censorship ==X-Module==> Dynamics_PhaseSpaceOccupationDensity
-    Vorticity_pmad_unification_censorship ==X-Module==> Probability_PhaseOrderParameter
-    Vorticity_pmad_unification_censorship_dim ==X-Module==> Axioms_Trajectory
-    Vorticity_pmad_unification_censorship_dim ==X-Module==> Dynamics_IsAdmissibleAttractor
-    Vorticity_pmad_unification_censorship_dim --> Vorticity_SynthesizedSpacetimeMetricDim
-    Vorticity_pmad_unification_censorship_dim ==X-Module==> Dynamics_PhaseSpaceOccupationDensity
-    Vorticity_pmad_unification_censorship_dim ==X-Module==> Probability_PhaseOrderParameter
-    Vorticity_phase_space_occupation_density_sum_bound ==X-Module==> Axioms_Trajectory
-    Vorticity_phase_space_occupation_density_sum_bound ==X-Module==> Dynamics_PhaseSpaceOccupationDensity
-    Vorticity_phase_space_occupation_density_sum_bound ==X-Module==> Dynamics_PhaseFlowDerivative
-    Vorticity_pmad_unification_censorship_dim_alltime ==X-Module==> Axioms_Trajectory
-    Vorticity_pmad_unification_censorship_dim_alltime ==X-Module==> Probability_PhaseOrderParameter
-    Vorticity_pmad_unification_censorship_dim_alltime --> Vorticity_SynthesizedSpacetimeMetricDim
-    Vorticity_pmad_unification_censorship_dim_alltime ==X-Module==> Dynamics_PhaseSpaceOccupationDensity
-    Vorticity_pmad_unification_censorship_dim_alltime --> Vorticity_phase_space_occupation_density_sum_bound
-    Vorticity_macroscopic_geodesic_completeness_invariant --> Vorticity_UnifiedMacroscopicSpacetimeMetric
-    Axioms_Trajectory --> Axioms_PhaseState
-    Axioms_AttractorSet --> Axioms_PhaseState
-    Axioms_AttractorSet --> Axioms_Trajectory
-    Metrics_resonance_monotonicity --> Metrics_DynamicSpatialAdjacency
-    Metrics_spatial_locality_collapse --> Metrics_DynamicSpatialAdjacency
-    Metrics_metric_singularity_censorship --> Metrics_EmergentComplianceMetric
-    Metrics_stiffness_from_overlap_functional ==X-Module==> Axioms_Trajectory
-    Metrics_stiffness_from_overlap_functional ==X-Module==> Dynamics_IsPmadFlow
-    Metrics_stiffness_from_overlap_functional ==X-Module==> Probability_PhaseOverlapFunctional
-    Metrics_compliance_metric_diagonal_bound --> Metrics_EmergentComplianceMetric
-    Metrics_LocalPhaseVelocityGradient ==X-Module==> Axioms_Trajectory
-    Metrics_LocalPhaseVorticityTensor ==X-Module==> Axioms_Trajectory
-    Metrics_LocalPhaseVorticityTensor --> Metrics_LocalPhaseVelocityGradient
-    Metrics_vorticity_tensor_magnitude_bound ==X-Module==> Axioms_Trajectory
-    Metrics_vorticity_tensor_magnitude_bound --> Metrics_LocalPhaseVorticityTensor
-    Metrics_vorticity_tensor_magnitude_bound --> Metrics_LocalPhaseVelocityGradient
-    Metrics_vorticity_tensor_translational_invariance ==X-Module==> Axioms_Trajectory
-    Metrics_vorticity_tensor_translational_invariance --> Metrics_LocalPhaseVorticityTensor
-    Metrics_vorticity_tensor_translational_invariance --> Metrics_LocalPhaseVelocityGradient
-    Metrics_vorticity_tensor_gauge_invariance ==X-Module==> Axioms_Trajectory
-    Metrics_vorticity_tensor_gauge_invariance --> Metrics_LocalPhaseVorticityTensor
-    Metrics_vorticity_tensor_gauge_invariance --> Metrics_LocalPhaseVelocityGradient
-    Metrics_compliance_floor_monotonicity --> Metrics_ComplianceFloor
-    Metrics_compliance_floor_divergence_bounds --> Metrics_ComplianceFloor
-    Metrics_coordinate_independence ==X-Module==> Axioms_Trajectory
-    Metrics_coordinate_independence --> Metrics_LocalPhaseVelocityGradient
-    Metrics_attractor_dimensionality_bounds --> Metrics_AttractorDimensionality
-    Metrics_thermodynamic_density_regularity_bound --> Metrics_NormalizedMetricTraceDensity
-    Dynamics_IsPmadFlow ==X-Module==> Axioms_Trajectory
-    Dynamics_PhaseFlowDerivative ==X-Module==> Axioms_Trajectory
-    Dynamics_PhaseSpaceOccupationDensity ==X-Module==> Axioms_Trajectory
-    Dynamics_PhaseSpaceOccupationDensity --> Dynamics_PhaseFlowDerivative
-    Dynamics_pmad_flow_converges_to_attractor ==X-Module==> Axioms_Trajectory
-    Dynamics_pmad_flow_converges_to_attractor --> Dynamics_IsPmadFlow
-    Dynamics_pmad_flow_converges_to_attractor --> Dynamics_IsAdmissibleAttractor
-    Dynamics_pmad_flow_converges_to_attractor ==X-Module==> Axioms_PhaseState
-    Dynamics_global_phase_gauge_invariance ==X-Module==> Axioms_Trajectory
-    Dynamics_global_phase_gauge_invariance --> Dynamics_IsPmadFlow
-    Dynamics_stability_under_bounded_perturbations ==X-Module==> Axioms_IsDynamicallyStable
-    class Probability_phase_order_parameter_bounds_constructive,Probability_overlap_limit_of_matched_noiseless_flow,Probability_uncoupled_flow_volume_conservation,Probability_born_rule_resonance_limit,Probability_born_rule_derived_from_paper_dynamics,Probability_born_rule_general_weighted_limit,Probability_born_rule_bounded_noise_concentration,Probability_derive_ftc_evolution,Probability_born_rule_noise_degradation_bound,Probability_born_rule_noise_degradation_bound_derive_ftc_evolution,Probability_data_pipeline_discretization_bound,Renormalization_rg_flow_monotonicity,Renormalization_rg_flow_ir_fixed_point,Renormalization_compliance_floor_bounds_rg_spectrum,Renormalization_dynamics_to_renormalization_capacity_bound,Renormalization_rg_flow_finite_monotonicity,Renormalization_rg_flow_uv_bounds,Renormalization_rg_flow_component_bounds,Renormalization_rg_flow_c_theorem_analog,Incompleteness_visible_submanifold_decoupling_limit,Vorticity_vorticity_tensor_antisymmetric,Vorticity_compliance_floor_prevents_spacetime_singularity,Vorticity_transport_arrow_composition,Vorticity_pmad_unification_censorship,Vorticity_pmad_unification_censorship_dim,Vorticity_phase_space_occupation_density_sum_bound,Vorticity_pmad_unification_censorship_dim_alltime,Vorticity_macroscopic_geodesic_completeness_invariant,Metrics_resonance_monotonicity,Metrics_spatial_locality_collapse,Metrics_metric_singularity_censorship,Metrics_stiffness_from_overlap_functional,Metrics_compliance_metric_diagonal_bound,Metrics_vorticity_tensor_magnitude_bound,Metrics_vorticity_tensor_translational_invariance,Metrics_vorticity_tensor_gauge_invariance,Metrics_compliance_floor_monotonicity,Metrics_compliance_floor_divergence_bounds,Metrics_coordinate_independence,Metrics_compliance_metric_positivity,Metrics_attractor_dimensionality_bounds,Metrics_thermodynamic_density_regularity_bound,Dynamics_pmad_flow_converges_to_attractor,Dynamics_global_phase_gauge_invariance,Dynamics_stability_under_bounded_perturbations heavyNode;
+```text
+┌─── [Axioms.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  PhaseState                     
+│  ├─ ⚙️ [DEF]  Trajectory                     
+│  ├─ ⚙️ [DEF]  AttractorSet                   
+│  ├─ ⚙️ [DEF]  IsDynamicallyStable            
+│  ├─ ⚙️ [DEF]  UbiquitousResonance            
+└──────────────────────────────────────────────────────────────────────┘
 ```
+</details>
+
+```text
+       │
+       ▼ [Cross-Module Dependency Pipeline]
+```
+### 📦 Dynamics.lean (Attractor Convergence)
+<details open>
+<summary><b>View Module Elements (7 items)</b></summary>
+
+```text
+┌─── [Dynamics.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  IsPmadFlow                      ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  IsAdmissibleAttractor          
+│  ├─ ⚙️ [DEF]  PhaseFlowDerivative             ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  PhaseSpaceOccupationDensity     ➔ Outbound to: Axioms.Trajectory
+│  ├─ 🔥 [CORE] pmad_flow_converges_to_attractor  ➔ Outbound to: Axioms.Trajectory, Axioms.PhaseState, Axioms.Trajectory, Axioms.PhaseState, Axioms.PhaseState
+│  ├─ 🔥 [CORE] global_phase_gauge_invariance   ➔ Outbound to: Axioms.Trajectory
+│  ├─ 🔥 [CORE] stability_under_bounded_perturbations  ➔ Outbound to: Axioms.IsDynamicallyStable, Axioms.IsDynamicallyStable
+└──────────────────────────────────────────────────────────────────────┘
+```
+</details>
+
+```text
+       │
+       ▼ [Cross-Module Dependency Pipeline]
+```
+### 📦 Probability.lean (Born Rule & Bounds)
+<details open>
+<summary><b>View Module Elements (17 items)</b></summary>
+
+```text
+┌─── [Probability.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  PhaseOrderParameter             ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  PhaseOverlapFunctional          ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ ⚙️ [DEF]  PhaseSpaceContractionRate       ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  MacroscopicBornProbability      ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ ⚙️ [DEF]  AmplitudeWeight                
+│  ├─ ⚙️ [DEF]  TimeSeriesSample               
+│  ├─ 🔥 [CORE] phase_order_parameter_bounds_constructive  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] overlap_limit_of_matched_noiseless_flow  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] uncoupled_flow_volume_conservation  ➔ Outbound to: Axioms.Trajectory
+│  ├─ 🔥 [CORE] born_rule_resonance_limit       ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] born_rule_derived_from_paper_dynamics  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] born_rule_general_weighted_limit  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] born_rule_bounded_noise_concentration  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] derive_ftc_evolution            ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] born_rule_noise_degradation_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Axioms.Trajectory
+│  ├─ 🔥 [CORE] born_rule_noise_degradation_bound_derive_ftc_evolution  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] data_pipeline_discretization_bound 
+└──────────────────────────────────────────────────────────────────────┘
+```
+</details>
+
+```text
+       │
+       ▼ [Cross-Module Dependency Pipeline]
+```
+### 📦 Metrics.lean (Compliance Geometry)
+<details open>
+<summary><b>View Module Elements (22 items)</b></summary>
+
+```text
+┌─── [Metrics.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  AttractorDimensionality        
+│  ├─ ⚙️ [DEF]  PhaseMomentum                  
+│  ├─ ⚙️ [DEF]  EmergentComplianceMetric       
+│  ├─ ⚙️ [DEF]  LocalPhaseVelocityGradient      ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  LocalPhaseVorticityTensor       ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  ComplianceFloor                
+│  ├─ ⚙️ [DEF]  NormalizedMetricTraceDensity   
+│  ├─ ⚙️ [DEF]  DynamicSpatialAdjacency        
+│  ├─ 🔥 [CORE] resonance_monotonicity         
+│  ├─ 🔥 [CORE] spatial_locality_collapse      
+│  ├─ 🔥 [CORE] metric_singularity_censorship  
+│  ├─ 🔥 [CORE] stiffness_from_overlap_functional  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.PhaseOverlapFunctional, Probability.PhaseOverlapFunctional, Probability.PhaseOverlapFunctional
+│  ├─ 🔥 [CORE] compliance_metric_diagonal_bound 
+│  ├─ 🔥 [CORE] vorticity_tensor_magnitude_bound  ➔ Outbound to: Axioms.Trajectory
+│  ├─ 🔥 [CORE] vorticity_tensor_translational_invariance  ➔ Outbound to: Axioms.Trajectory
+│  ├─ 🔥 [CORE] vorticity_tensor_gauge_invariance  ➔ Outbound to: Axioms.Trajectory
+│  ├─ 🔥 [CORE] compliance_floor_monotonicity  
+│  ├─ 🔥 [CORE] compliance_floor_divergence_bounds 
+│  ├─ ⬜ [TRIV] coordinate_independence         ➔ Outbound to: Axioms.Trajectory
+│  ├─ 🔥 [CORE] compliance_metric_positivity   
+│  ├─ 🔥 [CORE] attractor_dimensionality_bounds 
+│  ├─ 🔥 [CORE] thermodynamic_density_regularity_bound 
+└──────────────────────────────────────────────────────────────────────┘
+```
+</details>
+
+```text
+       │
+       ▼ [Cross-Module Dependency Pipeline]
+```
+### 📦 Renormalization.lean (Scale Decay)
+<details open>
+<summary><b>View Module Elements (9 items)</b></summary>
+
+```text
+┌─── [Renormalization.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  AttractorDimensionalityRGFlow  
+│  ├─ 🔥 [CORE] rg_flow_monotonicity           
+│  ├─ 🔥 [CORE] rg_flow_ir_fixed_point          ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ ⬜ [TRIV] compliance_floor_bounds_rg_spectrum  ➔ Outbound to: Metrics.EmergentComplianceMetric, Metrics.metric_singularity_censorship, Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] dynamics_to_renormalization_capacity_bound  ➔ Outbound to: Dynamics.IsAdmissibleAttractor, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] rg_flow_finite_monotonicity     ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] rg_flow_uv_bounds               ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] rg_flow_component_bounds       
+│  ├─ 🔥 [CORE] rg_flow_c_theorem_analog        ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+└──────────────────────────────────────────────────────────────────────┘
+```
+</details>
+
+```text
+       │
+       ▼ [Cross-Module Dependency Pipeline]
+```
+### 📦 Vorticity.lean (Spacetime Synthesis)
+<details open>
+<summary><b>View Module Elements (18 items)</b></summary>
+
+```text
+┌─── [Vorticity.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  MacroscopicPhaseCurrent        
+│  ├─ ⚙️ [DEF]  PhaseVelocityGradient           ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  PhaseVorticityTensor            ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  UnifiedMacroscopicSpacetimeMetricDim 
+│  ├─ 🔥 [CORE] vorticity_tensor_antisymmetric  ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  LocalFrameDraggingVector        ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⚙️ [DEF]  FrameDraggingMetricComponent   
+│  ├─ ⚙️ [DEF]  UnifiedMacroscopicSpacetimeMetric 
+│  ├─ ⚙️ [DEF]  SynthesizedSpacetimeMetric1     ➔ Outbound to: Axioms.Trajectory, Probability.PhaseOrderParameter, Metrics.AttractorDimensionality, Dynamics.PhaseSpaceOccupationDensity
+│  ├─ ⚙️ [DEF]  SynthesizedSpacetimeMetricDim   ➔ Outbound to: Axioms.Trajectory, Probability.PhaseOrderParameter, Metrics.AttractorDimensionality, Dynamics.PhaseSpaceOccupationDensity
+│  ├─ 🔥 [CORE] compliance_floor_prevents_spacetime_singularity 
+│  ├─ ⚙️ [DEF]  TransportArrow                 
+│  ├─ 🔥 [CORE] transport_arrow_composition    
+│  ├─ 🔥 [CORE] pmad_unification_censorship     ➔ Outbound to: Axioms.Trajectory, Dynamics.IsAdmissibleAttractor, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter
+│  ├─ 🔥 [CORE] pmad_unification_censorship_dim  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsAdmissibleAttractor, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter
+│  ├─ 🔥 [CORE] phase_space_occupation_density_sum_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseFlowDerivative, Dynamics.PhaseFlowDerivative, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity
+│  ├─ 🔥 [CORE] pmad_unification_censorship_dim_alltime  ➔ Outbound to: Axioms.Trajectory, Probability.PhaseOrderParameter, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity
+│  ├─ 🔥 [CORE] macroscopic_geodesic_completeness_invariant 
+└──────────────────────────────────────────────────────────────────────┘
+```
+</details>
+
+```text
+       │
+       ▼ [Cross-Module Dependency Pipeline]
+```
+### 📦 Incompleteness.lean (Decoupled Limits)
+<details open>
+<summary><b>View Module Elements (4 items)</b></summary>
+
+```text
+┌─── [Incompleteness.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  FullPhaseSpace                 
+│  ├─ ⚙️ [DEF]  EmergentEffectiveForce         
+│  ├─ ⚙️ [DEF]  VisibleSubmanifoldEvolution    
+│  ├─ 🔥 [CORE] visible_submanifold_decoupling_limit 
+└──────────────────────────────────────────────────────────────────────┘
+```
+</details>
+
+```text
+       │
+       ▼ [Cross-Module Dependency Pipeline]
+```
+### 📦 Test.lean (spiral-vm runtime example)
+<details open>
+<summary><b>View Module Elements (16 items)</b></summary>
+
+```text
+┌─── [Test.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  SpiralAlgoConfig               
+│  ├─ ⚙️ [DEF]  executionStepCount             
+│  ├─ 🔥 [CORE] executionStepCount_polynomial  
+│  ├─ ⚙️ [DEF]  IsSubExponentiallyBounded      
+│  ├─ 🔥 [CORE] spiral_shor_like_subexponential_bound  ➔ Outbound to: Dynamics.IsPmadFlow, Probability.TimeSeriesSample
+│  ├─ 🔥 [CORE] pmad_trajectory_discretization_bridge  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.TimeSeriesSample, Probability.data_pipeline_discretization_bound
+│  ├─ 🔥 [CORE] pmad_rg_attractor_convergence_time  ➔ Outbound to: Dynamics.IsAdmissibleAttractor, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Renormalization.dynamics_to_renormalization_capacity_bound, Renormalization.rg_flow_c_theorem_analog
+│  ├─ ⚙️ [DEF]  CoprimeInitialState            
+│  ├─ ⚙️ [DEF]  PhaseGradientStep              
+│  ├─ ⬜ [TRIV] gradient_descent_runtime_linearity  ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Renormalization.rg_flow_c_theorem_analog, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ ⚙️ [DEF]  DualToneWaveform               
+│  ├─ 🔥 [CORE] dual_tone_attractor_smoothing   ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Renormalization.rg_flow_c_theorem_analog, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ ⚙️ [DEF]  MeanFieldState                 
+│  ├─ 🔥 [CORE] mean_field_velocity_bounded    
+│  ├─ 🔥 [CORE] global_non_linear_lattice_convergence  ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] stochastic_gradient_linearity   ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Probability.MacroscopicBornProbability, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability, Probability.AmplitudeWeight, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution, Probability.MacroscopicBornProbability, Probability.AmplitudeWeight
+└──────────────────────────────────────────────────────────────────────┘
+```
+</details>
+
+```text
+       │
+       ▼ [Cross-Module Dependency Pipeline]
+```
+### 📦 PhyslibBridge.lean (Show equivalence with Physlib)
+<details open>
+<summary><b>View Module Elements (8 items)</b></summary>
+
+```text
+┌─── [PhyslibBridge.lean] ──────────────────────────────────────────────────┐
+│  ├─ ⚙️ [DEF]  K0                             
+│  ├─ ⚙️ [DEF]  K1                             
+│  ├─ ⚙️ [DEF]  bundledPmadPhaseDampingChannel  ➔ Outbound to: Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] physlib_quantum_probability_general_bridge  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution, Probability.AmplitudeWeight
+│  ├─ 🔥 [CORE] amplitude_weight_equals_quantum_norm  ➔ Outbound to: Probability.AmplitudeWeight, Probability.AmplitudeWeight, Probability.AmplitudeWeight
+│  ├─ 🔥 [CORE] physlib_off_diagonal_decoherence_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution
+│  ├─ ⬜ [TRIV] bundled_pmad_channel_evaluation 
+│  ├─ 🔥 [CORE] pmad_flow_tracks_bundled_cptp_output  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability, Probability.MacroscopicBornProbability, Axioms.Trajectory, Probability.MacroscopicBornProbability
+└──────────────────────────────────────────────────────────────────────┘
+```
+</details>
+
 
 ---
 
@@ -371,4 +333,5 @@ For the LaTeX declarations block or manuscript citations, please use:
   journal = {GitHub Repository},
   howpublished \(= {\url{https://github.com/cinquemb/PMAD-lean}} \)}
 ```
+
 

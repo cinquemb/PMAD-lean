@@ -127,7 +127,7 @@ noncomputable def SynthesizedSpacetimeMetricDim
       PhaseVorticityTensor κ ϕ t idx_i idx_j
     else 0
 
-  -- Pass the actual constructed matrices directly into your true operator definition
+  -- Pass the actual constructed matrices directly into the operator definition
   UnifiedMacroscopicSpacetimeMetricDim d C Ω_tensor 1
 
 omit [DecidableEq N] [Fintype N] in
@@ -147,7 +147,7 @@ theorem compliance_floor_prevents_spacetime_singularity
   simp only [div_one]
   -- Decompose the absolute value into two real inequalities using abs_le
   rw [abs_le]
-  -- Call the exact upper and lower bound lemmas tracking M_phi from your mathlib search
+  -- Call the exact upper and lower bound tracking M_phi from mathlib search
   have hM1 := le_abs_self M_phi
   have hM2 := neg_le_abs M_phi
   -- Track the maximum possible geometric distortion across the spatial interval bounds
@@ -192,9 +192,9 @@ theorem transport_arrow_composition
     (h_prob_to_metrics : TransportArrow Probability_Bound Dynamics_Bound)
     (h_metrics_to_spacetime : TransportArrow Dynamics_Bound Spacetime_Bound) :
     TransportArrow Probability_Bound Spacetime_Bound := by
-  -- Unfold our categorical framework wrapper representation
+  -- Unfold categorical framework wrapper representation
   unfold TransportArrow at h_prob_to_metrics h_metrics_to_spacetime ⊢
-  -- 1. Introduce the baseline constraint from your Probability criteria 
+  -- 1. Introduce the baseline constraint from Probability criteria 
   intro h_prob
   -- 2. Pass it down to the intermediate Dynamics/Metrics stage 
   have h_dyn := h_prob_to_metrics h_prob
@@ -244,7 +244,7 @@ theorem pmad_unification_censorship_dim
     ∃ B : ℝ, |SynthesizedSpacetimeMetricDim d ω κ ϕ t _μ_spectrum Ω g r 0 0| ≤ B := by
   -- 1. Use the explicit algebraic evaluation hypothesis to bypass the abstract matrix inverse shelf instantly
   rw [h_inverse_eval]
-  -- 2. Instantiate the bound variable B using your exact continuous coordinate parameter r
+  -- 2. Instantiate the bound variable B using exact continuous coordinate parameter r
   use |-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i Ω)^2) / ((PhaseOrderParameter ϕ t)^2)))|
 
 omit [DecidableEq N] in
