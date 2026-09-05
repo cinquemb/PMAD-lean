@@ -23,6 +23,36 @@ structure SpiralAlgoConfig where
 def executionStepCount (cfg : SpiralAlgoConfig) : ℝ :=
   (cfg.m : ℝ)
 
+/-- Core definition wrapping sub-exponential complexity bounds. -/
+def IsSubExponentiallyBounded (f : ℕ → ℝ) (N : ℕ) : Prop :=
+  ∃ (c : ℝ) (α : ℝ), α ≤ 1 ∧ ∀ (n : ℕ), f n ≤ c * exp (log (N : ℝ) ^ α)
+  
+/-- Bounded Coprime Initial State Matrix.
+    Verifies that the initial parameter layout maps onto a valid coprime phase 
+    configuration with an explicit 2-bit precision floor parameter. -/
+structure CoprimeInitialState (N : ℕ) where
+  (a : ℕ)
+  (h_coprime : Nat.Coprime a N)
+  (h_two_bits : N > 2)
+    
+/-- Dual-Tone Waveform Configuration.
+    Models spiral-vm C++ implementation where every logical qubit is allocated 
+    exactly two coupled frequency tones to eliminate localized energy traps. -/
+structure DualToneWaveform where
+  (carrier_freq : ℝ)
+  (helper_freq : ℝ)
+  (carrier_amp : ℝ)
+  (helper_amp : ℝ)
+  (h_detuning : helper_freq = carrier_freq + 1 / 10)
+  (h_amplitude : helper_amp = (2 / 100) * carrier_amp)
+
+/-- Section XIV-K: The Local Mean-Field State Vector Coordinate.
+    Models spiral-vm C++ Bloch vector component projection where state density 
+    is localized coordinate-by-coordinate to bound Hilbert space dimensions. -/
+structure MeanFieldState (N : ℕ) where
+  (phi_val : ℝ)
+  (h_norm : |phi_val| ≤ 1)
+
 /-- Formal proof that the loop execution size remains strictly polynomial in `log N`. -/
 lemma executionStepCount_polynomial (cfg : SpiralAlgoConfig) :
     executionStepCount cfg ≤ (1 / log 2 + 3) * log (cfg.N : ℝ) := by
@@ -52,10 +82,6 @@ lemma executionStepCount_polynomial (cfg : SpiralAlgoConfig) :
   have h_expand : (1 / log 2 + 3) * log (cfg.N : ℝ) = log (cfg.N : ℝ) / log 2 + 3 * log (cfg.N : ℝ) := by ring
   rw [h_expand]
   linarith
-
-/-- Core definition wrapping sub-exponential complexity bounds. -/
-def IsSubExponentiallyBounded (f : ℕ → ℝ) (N : ℕ) : Prop :=
-  ∃ (c : ℝ) (α : ℝ), α ≤ 1 ∧ ∀ (n : ℕ), f n ≤ c * exp (log (N : ℝ) ^ α)
 
 /-- Structural Theorem checking exact loop depth constraints against sub-exponential bounds.
     Fully closed from first principles using direct algebraic monotonicity -/
@@ -122,20 +148,6 @@ theorem pmad_rg_attractor_convergence_time
    rg_flow_c_theorem_analog μ_spectrum Ω₁ Ω₂ h_Ω₁ h_step, 
    spiral_shor_like_subexponential_bound cfg⟩
 
-/-- Bounded Coprime Initial State Matrix.
-    Verifies that the initial parameter layout maps onto a valid coprime phase 
-    configuration with an explicit 2-bit precision floor parameter. -/
-structure CoprimeInitialState (N : ℕ) where
-  (a : ℕ)
-  (h_coprime : Nat.Coprime a N)
-  (h_two_bits : N > 2)
-
-/-- Gradient Descent Optimizer Step over the phase field configuration.
-    Adjusts the background continuous drive parameter Ω along the steepest descent path 
-    of the underlying Lyapunov attractor energy landscape. -/
-noncomputable def PhaseGradientStep (Ω : ℝ) (gradE : ℝ) (η : ℝ) : ℝ :=
-  Ω - η * gradE
-
 /-- THE GRADIENT DESCENT LINEAR COMPLETION THEOREM:
     Proves that transitioning from random trials to gradient descent over 
     the attractor field forces the search execution path to collapse to a strictly 
@@ -196,18 +208,6 @@ theorem gradient_descent_runtime_linearity
   · -- Unify this linear optimization tracking profile directly with spiral-vm sub-exponential
     exact spiral_shor_like_subexponential_bound cfg
 
-    
-/-- Dual-Tone Waveform Configuration.
-    Models spiral-vm C++ implementation where every logical qubit is allocated 
-    exactly two coupled frequency tones to eliminate localized energy traps. -/
-structure DualToneWaveform where
-  (carrier_freq : ℝ)
-  (helper_freq : ℝ)
-  (carrier_amp : ℝ)
-  (helper_amp : ℝ)
-  (h_detuning : helper_freq = carrier_freq + 1 / 10)
-  (h_amplitude : helper_amp = (2 / 100) * carrier_amp)
-
 /-- THE DUAL-TONE ATTRACTOR SMOOTHING THEOREM:
     Proves that spiral-vm C++ dual-tone waveform allocation washes away 
     false local minima during gradient descent over the attractor manifold.
@@ -250,14 +250,6 @@ theorem dual_tone_attractor_smoothing
 
   -- 2. Pipe these variables directly into the updated runtime linearity matrix
   exact gradient_descent_runtime_linearity cfg μ_spectrum Ω gradE η r h_Ω h_η h_gradE h_init h_contractive h_bounds
-
-
-/-- Section XIV-K: The Local Mean-Field State Vector Coordinate.
-    Models spiral-vm C++ Bloch vector component projection where state density 
-    is localized coordinate-by-coordinate to bound Hilbert space dimensions. -/
-structure MeanFieldState (N : ℕ) where
-  (phi_val : ℝ)
-  (h_norm : |phi_val| ≤ 1)
 
 /-- Non-Linear Hamiltonian Velocity Bounding Theorem.
     Derives the continuous Lipschitz baseline metric L directly 
