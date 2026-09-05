@@ -34,14 +34,6 @@ noncomputable def UnifiedMacroscopicSpacetimeMetricDim
     : Matrix (Fin (d + 1)) (Fin (d + 1)) ℝ :=
   (C + Ω_tensor + ε • (1 : Matrix (Fin (d + 1)) (Fin (d + 1)) ℝ))⁻¹
 
-
--- Isolate the variable omission strictly to the tensor proof that does not use matrices
-omit [DecidableEq N] [Fintype N] in
-/-- Lemma: Structural Proof of Anti-Symmetry for the Phase Vorticity Tensor. -/
-theorem vorticity_tensor_antisymmetric (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (i j : N) :
-    PhaseVorticityTensor κ ϕ t i j = -PhaseVorticityTensor κ ϕ t j i := by
-  simp only [PhaseVorticityTensor, neg_sub]
-
 /-- Section XII-G (Eq. 49): The Local Frame Dragging Coupling Vector (ω_drift). -/
 noncomputable def LocalFrameDraggingVector (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (g_eff : Matrix N N ℝ) (i : N) : ℝ :=
   ∑ j, PhaseVorticityTensor κ ϕ t i j * g_eff i j
@@ -56,7 +48,6 @@ noncomputable def UnifiedMacroscopicSpacetimeMetric (M_phi Q_phi : ℝ) (Sigma D
      0, Sigma / Delta, 0, 0;
      0, 0, Sigma, 0;
      -((2 * M_phi * r - Q_phi^2) * a * Real.sin theta ^ 2) / Sigma, 0, 0, (r^2 + a^2 + ((2 * M_phi * r - Q_phi^2) * a^2 * Real.sin theta ^ 2) / Sigma) * Real.sin theta ^ 2]
-
 
 /-- Bridge function synthesizing micro phase mechanics into macroscopic metric profiles. 
 Completely deterministic and tied directly to the non-autonomous dynamical flow core. -/
@@ -130,6 +121,18 @@ noncomputable def SynthesizedSpacetimeMetricDim
   -- Pass the actual constructed matrices directly into the operator definition
   UnifiedMacroscopicSpacetimeMetricDim d C Ω_tensor 1
 
+/-- Definition: A workflow mapping is a valid PMAD Transport Arrow from module A to module B 
+    if a verified physical boundary condition in module A logically enforces the 
+    regularity bounds of module B. -/
+def TransportArrow (A : Prop) (B : Prop) : Prop := A → B
+
+-- Isolate the variable omission strictly to the tensor proof that does not use matrices
+omit [DecidableEq N] [Fintype N] in
+/-- Lemma: Structural Proof of Anti-Symmetry for the Phase Vorticity Tensor. -/
+theorem vorticity_tensor_antisymmetric (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) (i j : N) :
+    PhaseVorticityTensor κ ϕ t i j = -PhaseVorticityTensor κ ϕ t j i := by
+  simp only [PhaseVorticityTensor, neg_sub]
+
 omit [DecidableEq N] [Fintype N] in
 /-- THE INTER-MODULE TRANSPORT ARROW (Metrics ⟶ Spacetime)
     Proves that the macroscopic spacetime metric remains perfectly regular under complete 
@@ -175,31 +178,6 @@ theorem compliance_floor_prevents_spacetime_singularity
   constructor
   · linarith [sq_nonneg Q_phi]
   · linarith [sq_nonneg Q_phi]
-
-
-/-- Definition: A workflow mapping is a valid PMAD Transport Arrow from module A to module B 
-    if a verified physical boundary condition in module A logically enforces the 
-    regularity bounds of module B. -/
-def TransportArrow (A : Prop) (B : Prop) : Prop := A → B
-
-omit [DecidableEq N] [Fintype N] in
-/-- Composition of Transport Arrows.
-    Categorical pipeline validation. Proves that if a valid physical transport link exists 
-    from Probability to Metrics, and another exists from Metrics to Spacetime, they compose 
-    transitively to guarantee a direct, regular transport flow from Probability to Spacetime. -/
-theorem transport_arrow_composition
-    {Probability_Bound Dynamics_Bound Spacetime_Bound : Prop}
-    (h_prob_to_metrics : TransportArrow Probability_Bound Dynamics_Bound)
-    (h_metrics_to_spacetime : TransportArrow Dynamics_Bound Spacetime_Bound) :
-    TransportArrow Probability_Bound Spacetime_Bound := by
-  -- Unfold categorical framework wrapper representation
-  unfold TransportArrow at h_prob_to_metrics h_metrics_to_spacetime ⊢
-  -- 1. Introduce the baseline constraint from Probability criteria 
-  intro h_prob
-  -- 2. Pass it down to the intermediate Dynamics/Metrics stage 
-  have h_dyn := h_prob_to_metrics h_prob
-  -- 3. Transport it directly to seal the ultimate Spacetime Metric regularity goal
-  exact h_metrics_to_spacetime h_dyn
 
 omit [DecidableEq N] in
 /-- Master Unification Theorem: Proves that the physical spacetime metric component 
