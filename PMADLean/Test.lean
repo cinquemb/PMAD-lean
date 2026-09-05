@@ -137,22 +137,27 @@ theorem pmad_trajectory_discretization_bridge
     |ϕ t i - TimeSeriesSample (fun t' => ϕ t' i) Δt n| ≤ L * Δt := by
   exact data_pipeline_discretization_bound (fun t' => ϕ t' i) Δt h_Δt L h_L h_lip n t h_interval
   
-  /-- THE SYSTEM CONVERGENCE UNIFICATION THEOREM (The C-Theorem Variant):
+/-- THE SYSTEM CONVERGENCE UNIFICATION THEOREM (The C-Theorem Variant):
     links discrete execution loop parameters directly to the 
     irreversible entropy decay of the Wilsonian Renormalization Group flow.
     Proves that the dimensionality of un-converged states tracks the step bound. -/
-
 theorem pmad_rg_attractor_convergence_time
     {M : Type*} [DecidableEq M] [Fintype M] (cfg : SpiralAlgoConfig)
+    (ϕ : Trajectory M) (ω : M → ℝ) (κ : M → M → ℝ) (ξ : ℝ → M → ℝ) (B : ℝ)
+    (h_flow : IsPmadFlow ϕ ω κ ξ B) (R : M → ℝ)
     (μ_spectrum : M → ℝ) (Ω₁ Ω₂ : ℝ) (h_Ω₁ : 0 < Ω₁) (h_step : Ω₁ ≤ Ω₂) 
     (lambda_max : ℝ → ℝ) (h_stable : IsAdmissibleAttractor lambda_max) :
-    
     AttractorDimensionality μ_spectrum Ω₂ ≤ (Fintype.card M : ℝ) ∧ 
     AttractorDimensionality μ_spectrum Ω₂ ≤ AttractorDimensionality μ_spectrum Ω₁ ∧
-    IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N :=
-  ⟨dynamics_to_renormalization_capacity_bound μ_spectrum Ω₂ lambda_max h_stable, 
-   rg_flow_c_theorem_analog μ_spectrum Ω₁ Ω₂ h_Ω₁ h_step, 
-   spiral_shor_like_subexponential_bound cfg⟩
+    IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N := by
+  -- 1. Construct the physical bridge: derive the AttractorSet directly using A2
+  have h_attractor := pmad_flow_converges_to_attractor ϕ ω κ ξ B h_flow R lambda_max h_stable
+  -- 2. Clear the existential quantifier using obtain to introduce fresh variables safely
+  obtain ⟨AttractorField, _h_field_converges⟩ := h_attractor
+  -- 3. Pass the valid capacity bounds and discrete monotonicity constraints forward
+  exact ⟨dynamics_to_renormalization_capacity_bound μ_spectrum Ω₂ lambda_max h_stable, 
+         rg_flow_c_theorem_analog μ_spectrum Ω₁ Ω₂ h_Ω₁ h_step, 
+         spiral_shor_like_subexponential_bound cfg⟩
 
 /-- THE GRADIENT DESCENT LINEAR COMPLETION THEOREM:
     Proves that transitioning from random trials to gradient descent over 

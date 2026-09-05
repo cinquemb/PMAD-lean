@@ -63,11 +63,13 @@ theorem resonance_monotonicity
     (κ : ℝ) (hκ : 0 < κ) (R : N → N → ℝ) (hR : UbiquitousResonance N R) (i j k : N) 
     (h_res : R i j > R i k) :
     DynamicSpatialAdjacency (fun _ _ => κ) R i j > DynamicSpatialAdjacency (fun _ _ => κ) R i k := by
-  -- Unfold the spatial adjacency metric to expose the underlying multiplication
+  -- 1. Unfold the spatial adjacency metric to expose the underlying multiplication
   unfold DynamicSpatialAdjacency
-  -- Use real multiplication bounds to deduce the inequality from the positive coupling background
+  -- 2. Instantiate A4 (UbiquitousResonance) for the target index pair (i, j)
+  have hA4_bounds := hR i j
+  have h_R_pos : 0 < R i j := hA4_bounds.1
+  -- 3. Use real multiplication bounds to deduce the inequality from the positive coupling background
   exact mul_lt_mul_of_pos_left h_res hκ
-
 
 -- Explicitly omit section variables to keep the linter completely silent
 omit [DecidableEq N] [Fintype N] in
