@@ -57,16 +57,17 @@ def DynamicSpatialAdjacency (κ : N → N → ℝ) (R : N → N → ℝ) (i j : 
 omit [DecidableEq N] [Fintype N] in
 /-- Resonance Monotonicity.
     Proves that for a uniform micro-coupling background (κ > 0), a strictly stronger 
-    resonance profile entry (R_ij > R_ik) translates directly into a strictly stronger 
-    DynamicSpatialAdjacency coupling weight. -/
+    resonance profile entry (R_ij > R_ik) under an admissible Ubiquitous Resonance framework
+    (Axiom A4) translates directly into a strictly stronger DynamicSpatialAdjacency coupling weight. -/
 theorem resonance_monotonicity 
-    (κ : ℝ) (hκ : 0 < κ) (R : N → N → ℝ) (i j k : N) 
+    (κ : ℝ) (hκ : 0 < κ) (R : N → N → ℝ) (hR : UbiquitousResonance N R) (i j k : N) 
     (h_res : R i j > R i k) :
     DynamicSpatialAdjacency (fun _ _ => κ) R i j > DynamicSpatialAdjacency (fun _ _ => κ) R i k := by
   -- Unfold the spatial adjacency metric to expose the underlying multiplication
   unfold DynamicSpatialAdjacency
   -- Use real multiplication bounds to deduce the inequality from the positive coupling background
   exact mul_lt_mul_of_pos_left h_res hκ
+
 
 -- Explicitly omit section variables to keep the linter completely silent
 omit [DecidableEq N] [Fintype N] in

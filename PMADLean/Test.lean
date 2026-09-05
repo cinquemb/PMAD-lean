@@ -34,6 +34,12 @@ structure CoprimeInitialState (N : ℕ) where
   (a : ℕ)
   (h_coprime : Nat.Coprime a N)
   (h_two_bits : N > 2)
+
+/-- Gradient Descent Optimizer Step over the phase field configuration.
+    Adjusts the background continuous drive parameter Ω along the steepest descent path 
+    of the underlying Lyapunov attractor energy landscape. -/
+noncomputable def PhaseGradientStep (Ω : ℝ) (gradE : ℝ) (η : ℝ) : ℝ :=
+  Ω - η * gradE
     
 /-- Dual-Tone Waveform Configuration.
     Models spiral-vm C++ implementation where every logical qubit is allocated 
