@@ -13,6 +13,7 @@ decl_to_full_id = {}
 def_nodes = set()          
 node_complexity = {}       
 cross_dependencies = {}
+all_dependencies = {}      # Track internal + cross dependencies for complexity logic
 
 # FIRST PASS: Extract declarations and pre-categorize trivial proofs based on file contents
 for filename in files_to_scan:
@@ -100,6 +101,11 @@ for filename in files_to_scan:
             if token in decl_to_full_id and token != src_short:
                 tgt_full = decl_to_full_id[token]
                 
+                # Track for total dependency counts (Internal + Cross)
+                if src_full not in all_dependencies:
+                    all_dependencies[src_full] = set()
+                all_dependencies[src_full].add(tgt_full)
+                
                 # Check for cross-module edge transformations
                 is_cross = token not in [d[0] for d in file_declarations[module]]
                 
@@ -139,16 +145,19 @@ for idx, module in enumerate(existing_modules):
     md_lines.append("```text")
     md_lines.append(f"┌─── [{module}.lean] ──────────────────────────────────────────────────┐")
     for short_name, full_id in decls:
+        cross_deps = list(set(cross_dependencies.get(full_id, [])))
+        total_dep_count = len(all_dependencies.get(full_id, set()))
+        
         if full_id in def_nodes:
             tag = "[DEF]"
             icon = "⚙️"
         else:
-            complexity = node_complexity.get(full_id, "heavy")
+            # FIX: Heavy if it relies on more than 0 total dependency and more than 0 cross deps
+            complexity = "heavy" if (total_dep_count > 0 and len(cross_deps) > 0) else "trivial"
             tag = "[TRIV]" if complexity == "trivial" else "[CORE]"
             icon = "⬜" if complexity == "trivial" else "🔥"
             
-        deps = cross_dependencies.get(full_id, [])
-        dep_track = f" ➔ Outbound to: {', '.join(deps)}" if deps else ""
+        dep_track = f" ➔ Outbound to: {', '.join(cross_deps)}" if cross_deps else ""
         
         # Format a clean visual track row
         md_lines.append(f"│  ├─ {icon} {tag:<6} {short_name:<30} {dep_track}")
@@ -161,4 +170,3 @@ with open("theorem_architecture.md", "w", encoding="utf-8") as out:
     out.write("\n".join(md_lines) + "\n")
 
 print("✔ Optimized high-scannability dashboard written to theorem_architecture.md")
-

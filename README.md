@@ -50,9 +50,9 @@ Below is the strict dependency architecture certified by the Lean compiler kerne
 │  ├─ ⚙️ [DEF]  IsAdmissibleAttractor          
 │  ├─ ⚙️ [DEF]  PhaseFlowDerivative             ➔ Outbound to: Axioms.Trajectory
 │  ├─ ⚙️ [DEF]  PhaseSpaceOccupationDensity     ➔ Outbound to: Axioms.Trajectory
-│  ├─ 🔥 [CORE] pmad_flow_converges_to_attractor  ➔ Outbound to: Axioms.Trajectory, Axioms.PhaseState, Axioms.Trajectory, Axioms.PhaseState, Axioms.PhaseState
+│  ├─ 🔥 [CORE] pmad_flow_converges_to_attractor  ➔ Outbound to: Axioms.Trajectory, Axioms.PhaseState
 │  ├─ 🔥 [CORE] global_phase_gauge_invariance   ➔ Outbound to: Axioms.Trajectory
-│  ├─ 🔥 [CORE] stability_under_bounded_perturbations  ➔ Outbound to: Axioms.IsDynamicallyStable, Axioms.IsDynamicallyStable
+│  ├─ 🔥 [CORE] stability_under_bounded_perturbations  ➔ Outbound to: Axioms.IsDynamicallyStable
 └──────────────────────────────────────────────────────────────────────┘
 ```
 </details>
@@ -79,11 +79,11 @@ Below is the strict dependency architecture certified by the Lean compiler kerne
 │  ├─ 🔥 [CORE] born_rule_resonance_limit       ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
 │  ├─ 🔥 [CORE] born_rule_derived_from_paper_dynamics  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
 │  ├─ 🔥 [CORE] born_rule_general_weighted_limit  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
-│  ├─ 🔥 [CORE] born_rule_bounded_noise_concentration  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] born_rule_bounded_noise_concentration  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
 │  ├─ 🔥 [CORE] derive_ftc_evolution            ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
-│  ├─ 🔥 [CORE] born_rule_noise_degradation_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Axioms.Trajectory
+│  ├─ 🔥 [CORE] born_rule_noise_degradation_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
 │  ├─ 🔥 [CORE] born_rule_noise_degradation_bound_derive_ftc_evolution  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow
-│  ├─ 🔥 [CORE] data_pipeline_discretization_bound 
+│  ├─ ⬜ [TRIV] data_pipeline_discretization_bound 
 └──────────────────────────────────────────────────────────────────────┘
 ```
 </details>
@@ -106,20 +106,20 @@ Below is the strict dependency architecture certified by the Lean compiler kerne
 │  ├─ ⚙️ [DEF]  ComplianceFloor                
 │  ├─ ⚙️ [DEF]  NormalizedMetricTraceDensity   
 │  ├─ ⚙️ [DEF]  DynamicSpatialAdjacency        
-│  ├─ 🔥 [CORE] resonance_monotonicity         
-│  ├─ 🔥 [CORE] spatial_locality_collapse      
-│  ├─ 🔥 [CORE] metric_singularity_censorship  
-│  ├─ 🔥 [CORE] stiffness_from_overlap_functional  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.PhaseOverlapFunctional, Probability.PhaseOverlapFunctional, Probability.PhaseOverlapFunctional
-│  ├─ 🔥 [CORE] compliance_metric_diagonal_bound 
+│  ├─ ⬜ [TRIV] resonance_monotonicity         
+│  ├─ ⬜ [TRIV] spatial_locality_collapse      
+│  ├─ ⬜ [TRIV] metric_singularity_censorship  
+│  ├─ 🔥 [CORE] stiffness_from_overlap_functional  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.PhaseOverlapFunctional
+│  ├─ ⬜ [TRIV] compliance_metric_diagonal_bound 
 │  ├─ 🔥 [CORE] vorticity_tensor_magnitude_bound  ➔ Outbound to: Axioms.Trajectory
 │  ├─ 🔥 [CORE] vorticity_tensor_translational_invariance  ➔ Outbound to: Axioms.Trajectory
 │  ├─ 🔥 [CORE] vorticity_tensor_gauge_invariance  ➔ Outbound to: Axioms.Trajectory
-│  ├─ 🔥 [CORE] compliance_floor_monotonicity  
-│  ├─ 🔥 [CORE] compliance_floor_divergence_bounds 
-│  ├─ ⬜ [TRIV] coordinate_independence         ➔ Outbound to: Axioms.Trajectory
-│  ├─ 🔥 [CORE] compliance_metric_positivity   
-│  ├─ 🔥 [CORE] attractor_dimensionality_bounds 
-│  ├─ 🔥 [CORE] thermodynamic_density_regularity_bound 
+│  ├─ ⬜ [TRIV] compliance_floor_monotonicity  
+│  ├─ ⬜ [TRIV] compliance_floor_divergence_bounds 
+│  ├─ 🔥 [CORE] coordinate_independence         ➔ Outbound to: Axioms.Trajectory
+│  ├─ ⬜ [TRIV] compliance_metric_positivity   
+│  ├─ ⬜ [TRIV] attractor_dimensionality_bounds 
+│  ├─ ⬜ [TRIV] thermodynamic_density_regularity_bound 
 └──────────────────────────────────────────────────────────────────────┘
 ```
 </details>
@@ -135,14 +135,14 @@ Below is the strict dependency architecture certified by the Lean compiler kerne
 ```text
 ┌─── [Renormalization.lean] ──────────────────────────────────────────────────┐
 │  ├─ ⚙️ [DEF]  AttractorDimensionalityRGFlow  
-│  ├─ 🔥 [CORE] rg_flow_monotonicity           
-│  ├─ 🔥 [CORE] rg_flow_ir_fixed_point          ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
-│  ├─ ⬜ [TRIV] compliance_floor_bounds_rg_spectrum  ➔ Outbound to: Metrics.EmergentComplianceMetric, Metrics.metric_singularity_censorship, Metrics.AttractorDimensionality
-│  ├─ 🔥 [CORE] dynamics_to_renormalization_capacity_bound  ➔ Outbound to: Dynamics.IsAdmissibleAttractor, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
-│  ├─ 🔥 [CORE] rg_flow_finite_monotonicity     ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
-│  ├─ 🔥 [CORE] rg_flow_uv_bounds               ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
-│  ├─ 🔥 [CORE] rg_flow_component_bounds       
-│  ├─ 🔥 [CORE] rg_flow_c_theorem_analog        ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ ⬜ [TRIV] rg_flow_monotonicity           
+│  ├─ 🔥 [CORE] rg_flow_ir_fixed_point          ➔ Outbound to: Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] compliance_floor_bounds_rg_spectrum  ➔ Outbound to: Metrics.EmergentComplianceMetric, Metrics.AttractorDimensionality, Metrics.metric_singularity_censorship
+│  ├─ 🔥 [CORE] dynamics_to_renormalization_capacity_bound  ➔ Outbound to: Metrics.AttractorDimensionality, Dynamics.IsAdmissibleAttractor
+│  ├─ 🔥 [CORE] rg_flow_finite_monotonicity     ➔ Outbound to: Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] rg_flow_uv_bounds               ➔ Outbound to: Metrics.AttractorDimensionality
+│  ├─ ⬜ [TRIV] rg_flow_component_bounds       
+│  ├─ 🔥 [CORE] rg_flow_c_theorem_analog        ➔ Outbound to: Metrics.AttractorDimensionality
 └──────────────────────────────────────────────────────────────────────┘
 ```
 </details>
@@ -165,16 +165,16 @@ Below is the strict dependency architecture certified by the Lean compiler kerne
 │  ├─ ⚙️ [DEF]  LocalFrameDraggingVector        ➔ Outbound to: Axioms.Trajectory
 │  ├─ ⚙️ [DEF]  FrameDraggingMetricComponent   
 │  ├─ ⚙️ [DEF]  UnifiedMacroscopicSpacetimeMetric 
-│  ├─ ⚙️ [DEF]  SynthesizedSpacetimeMetric1     ➔ Outbound to: Axioms.Trajectory, Probability.PhaseOrderParameter, Metrics.AttractorDimensionality, Dynamics.PhaseSpaceOccupationDensity
-│  ├─ ⚙️ [DEF]  SynthesizedSpacetimeMetricDim   ➔ Outbound to: Axioms.Trajectory, Probability.PhaseOrderParameter, Metrics.AttractorDimensionality, Dynamics.PhaseSpaceOccupationDensity
-│  ├─ 🔥 [CORE] compliance_floor_prevents_spacetime_singularity 
+│  ├─ ⚙️ [DEF]  SynthesizedSpacetimeMetric1     ➔ Outbound to: Metrics.AttractorDimensionality, Probability.PhaseOrderParameter, Axioms.Trajectory, Dynamics.PhaseSpaceOccupationDensity
+│  ├─ ⚙️ [DEF]  SynthesizedSpacetimeMetricDim   ➔ Outbound to: Metrics.AttractorDimensionality, Probability.PhaseOrderParameter, Axioms.Trajectory, Dynamics.PhaseSpaceOccupationDensity
+│  ├─ ⬜ [TRIV] compliance_floor_prevents_spacetime_singularity 
 │  ├─ ⚙️ [DEF]  TransportArrow                 
-│  ├─ 🔥 [CORE] transport_arrow_composition    
-│  ├─ 🔥 [CORE] pmad_unification_censorship     ➔ Outbound to: Axioms.Trajectory, Dynamics.IsAdmissibleAttractor, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter
-│  ├─ 🔥 [CORE] pmad_unification_censorship_dim  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsAdmissibleAttractor, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter
-│  ├─ 🔥 [CORE] phase_space_occupation_density_sum_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseFlowDerivative, Dynamics.PhaseFlowDerivative, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity
-│  ├─ 🔥 [CORE] pmad_unification_censorship_dim_alltime  ➔ Outbound to: Axioms.Trajectory, Probability.PhaseOrderParameter, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter, Dynamics.PhaseSpaceOccupationDensity, Probability.PhaseOrderParameter, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseSpaceOccupationDensity
-│  ├─ 🔥 [CORE] macroscopic_geodesic_completeness_invariant 
+│  ├─ ⬜ [TRIV] transport_arrow_composition    
+│  ├─ 🔥 [CORE] pmad_unification_censorship     ➔ Outbound to: Dynamics.PhaseSpaceOccupationDensity, Axioms.Trajectory, Dynamics.IsAdmissibleAttractor, Probability.PhaseOrderParameter
+│  ├─ 🔥 [CORE] pmad_unification_censorship_dim  ➔ Outbound to: Dynamics.PhaseSpaceOccupationDensity, Axioms.Trajectory, Dynamics.IsAdmissibleAttractor, Probability.PhaseOrderParameter
+│  ├─ 🔥 [CORE] phase_space_occupation_density_sum_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.PhaseSpaceOccupationDensity, Dynamics.PhaseFlowDerivative
+│  ├─ 🔥 [CORE] pmad_unification_censorship_dim_alltime  ➔ Outbound to: Probability.PhaseOrderParameter, Axioms.Trajectory, Dynamics.PhaseSpaceOccupationDensity
+│  ├─ ⬜ [TRIV] macroscopic_geodesic_completeness_invariant 
 └──────────────────────────────────────────────────────────────────────┘
 ```
 </details>
@@ -192,7 +192,7 @@ Below is the strict dependency architecture certified by the Lean compiler kerne
 │  ├─ ⚙️ [DEF]  FullPhaseSpace                 
 │  ├─ ⚙️ [DEF]  EmergentEffectiveForce         
 │  ├─ ⚙️ [DEF]  VisibleSubmanifoldEvolution    
-│  ├─ 🔥 [CORE] visible_submanifold_decoupling_limit 
+│  ├─ ⬜ [TRIV] visible_submanifold_decoupling_limit 
 └──────────────────────────────────────────────────────────────────────┘
 ```
 </details>
@@ -209,20 +209,20 @@ Below is the strict dependency architecture certified by the Lean compiler kerne
 ┌─── [Test.lean] ──────────────────────────────────────────────────┐
 │  ├─ ⚙️ [DEF]  SpiralAlgoConfig               
 │  ├─ ⚙️ [DEF]  executionStepCount             
-│  ├─ 🔥 [CORE] executionStepCount_polynomial  
+│  ├─ ⬜ [TRIV] executionStepCount_polynomial  
 │  ├─ ⚙️ [DEF]  IsSubExponentiallyBounded      
-│  ├─ 🔥 [CORE] spiral_shor_like_subexponential_bound  ➔ Outbound to: Dynamics.IsPmadFlow, Probability.TimeSeriesSample
-│  ├─ 🔥 [CORE] pmad_trajectory_discretization_bridge  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.TimeSeriesSample, Probability.data_pipeline_discretization_bound
-│  ├─ 🔥 [CORE] pmad_rg_attractor_convergence_time  ➔ Outbound to: Dynamics.IsAdmissibleAttractor, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Renormalization.dynamics_to_renormalization_capacity_bound, Renormalization.rg_flow_c_theorem_analog
+│  ├─ 🔥 [CORE] spiral_shor_like_subexponential_bound  ➔ Outbound to: Probability.TimeSeriesSample, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] pmad_trajectory_discretization_bridge  ➔ Outbound to: Probability.data_pipeline_discretization_bound, Probability.TimeSeriesSample, Axioms.Trajectory, Dynamics.IsPmadFlow
+│  ├─ 🔥 [CORE] pmad_rg_attractor_convergence_time  ➔ Outbound to: Renormalization.dynamics_to_renormalization_capacity_bound, Renormalization.rg_flow_c_theorem_analog, Metrics.AttractorDimensionality, Dynamics.IsAdmissibleAttractor
 │  ├─ ⚙️ [DEF]  CoprimeInitialState            
 │  ├─ ⚙️ [DEF]  PhaseGradientStep              
-│  ├─ ⬜ [TRIV] gradient_descent_runtime_linearity  ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Renormalization.rg_flow_c_theorem_analog, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] gradient_descent_runtime_linearity  ➔ Outbound to: Renormalization.rg_flow_c_theorem_analog, Metrics.AttractorDimensionality
 │  ├─ ⚙️ [DEF]  DualToneWaveform               
-│  ├─ 🔥 [CORE] dual_tone_attractor_smoothing   ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Renormalization.rg_flow_c_theorem_analog, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] dual_tone_attractor_smoothing   ➔ Outbound to: Renormalization.rg_flow_c_theorem_analog, Metrics.AttractorDimensionality
 │  ├─ ⚙️ [DEF]  MeanFieldState                 
-│  ├─ 🔥 [CORE] mean_field_velocity_bounded    
-│  ├─ 🔥 [CORE] global_non_linear_lattice_convergence  ➔ Outbound to: Metrics.AttractorDimensionality, Metrics.AttractorDimensionality
-│  ├─ 🔥 [CORE] stochastic_gradient_linearity   ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Metrics.AttractorDimensionality, Metrics.AttractorDimensionality, Probability.MacroscopicBornProbability, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability, Probability.AmplitudeWeight, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution, Probability.MacroscopicBornProbability, Probability.AmplitudeWeight
+│  ├─ ⬜ [TRIV] mean_field_velocity_bounded    
+│  ├─ 🔥 [CORE] global_non_linear_lattice_convergence  ➔ Outbound to: Metrics.AttractorDimensionality
+│  ├─ 🔥 [CORE] stochastic_gradient_linearity   ➔ Outbound to: Metrics.AttractorDimensionality, Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.AmplitudeWeight, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution, Probability.MacroscopicBornProbability
 └──────────────────────────────────────────────────────────────────────┘
 ```
 </details>
@@ -240,11 +240,11 @@ Below is the strict dependency architecture certified by the Lean compiler kerne
 │  ├─ ⚙️ [DEF]  K0                             
 │  ├─ ⚙️ [DEF]  K1                             
 │  ├─ ⚙️ [DEF]  bundledPmadPhaseDampingChannel  ➔ Outbound to: Dynamics.IsPmadFlow
-│  ├─ 🔥 [CORE] physlib_quantum_probability_general_bridge  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution, Probability.AmplitudeWeight
-│  ├─ 🔥 [CORE] amplitude_weight_equals_quantum_norm  ➔ Outbound to: Probability.AmplitudeWeight, Probability.AmplitudeWeight, Probability.AmplitudeWeight
-│  ├─ 🔥 [CORE] physlib_off_diagonal_decoherence_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution
+│  ├─ 🔥 [CORE] physlib_quantum_probability_general_bridge  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability
+│  ├─ 🔥 [CORE] amplitude_weight_equals_quantum_norm  ➔ Outbound to: Probability.AmplitudeWeight
+│  ├─ 🔥 [CORE] physlib_off_diagonal_decoherence_bound  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.born_rule_noise_degradation_bound_derive_ftc_evolution, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability
 │  ├─ ⬜ [TRIV] bundled_pmad_channel_evaluation 
-│  ├─ 🔥 [CORE] pmad_flow_tracks_bundled_cptp_output  ➔ Outbound to: Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.AmplitudeWeight, Probability.MacroscopicBornProbability, Probability.MacroscopicBornProbability, Axioms.Trajectory, Probability.MacroscopicBornProbability
+│  ├─ 🔥 [CORE] pmad_flow_tracks_bundled_cptp_output  ➔ Outbound to: Probability.MacroscopicBornProbability, Axioms.Trajectory, Dynamics.IsPmadFlow, Probability.AmplitudeWeight
 └──────────────────────────────────────────────────────────────────────┘
 ```
 </details>
