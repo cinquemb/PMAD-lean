@@ -55,6 +55,20 @@ def AmplitudeWeight (c : N → ℂ) (i j : N) : ℝ :=
     Represents a discrete 1D data pipeline array sampling a continuous trajectory. -/
 def TimeSeriesSample (ϕ : ℝ → ℝ) (Δt : ℝ) (n : ℕ) : ℝ :=
   ϕ (n * Δt)
+  
+
+/-- The network configuration is confined inside the stable nonlinear 
+    synchronization region (the Arnold Tongue) across time window T. -/
+noncomputable def IsInArnoldTongue
+    {N : Type*} [DecidableEq N] [Fintype N]
+    (ω : N → ℝ)
+    (κ : N → N → ℝ)
+    (ξ : ℝ → N → ℝ)
+    (B_noise : ℝ)
+    (ϕ : Trajectory N)
+    (h_dyn : IsPmadFlow ϕ ω κ ξ B_noise)
+    (T : ℝ) : Prop :=
+  ∀ i j, |ω i - ω j| < ‖PhaseOverlapFunctional ϕ ω κ ξ B_noise h_dyn i j T‖ * κ i j
 
 /-- Proves that the collective phase coherence parameter R(t) 
 always stays strictly bounded within the physical unit interval. -/

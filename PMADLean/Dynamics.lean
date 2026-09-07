@@ -42,7 +42,6 @@ noncomputable def PhaseSpaceOccupationDensity {N : Type*} [Fintype N]
   let ϕ_dot := PhaseFlowDerivative ω κ ϕ t i
   if Ω = 0 then 1 else Real.exp (- (ϕ_dot ^ 2) / (2 * Ω ^ 2))
 
-set_option linter.unusedTactic false in
 omit [DecidableEq N] in
 /-- If a flow has negative Lyapunov exponents / admissible attractors, it satisfies Axiom A2 (Attractor Determinism) by converging to an attractor set. -/
 theorem pmad_flow_converges_to_attractor 
