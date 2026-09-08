@@ -2,8 +2,9 @@ import PMADLean.Axioms
 import PMADLean.Dynamics
 import PMADLean.Metrics
 import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 
-open BigOperators Filter Matrix
+open BigOperators Filter Matrix Set MeasureTheory Topology
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
@@ -11,6 +12,13 @@ variable {N : Type*} [DecidableEq N] [Fintype N]
 /-- Section XIV-H (Eq. 81): The Wilsonian Renormalization Group Flow derivative. -/
 noncomputable def AttractorDimensionalityRGFlow (μ_spectrum : N → ℝ) (Ω : ℝ) : ℝ :=
   - ∑ i, (2 * μ_spectrum i ^ 2 * Ω ^ 2) / (μ_spectrum i ^ 2 + Ω ^ 2) ^ 2
+  
+-- Define the continuum calculations over an explicit upper boundary threshold X
+noncomputable def ContinuousAttractorDimensionality (ρ : ℝ → ℝ) (Ω X : ℝ) : ℝ :=
+  ∫ μ in (0)..X, (μ ^ 2 / (μ ^ 2 + Ω ^ 2)) * ρ μ
+
+noncomputable def ContinuousAttractorDimensionalityRGFlow (ρ : ℝ → ℝ) (Ω X : ℝ) : ℝ :=
+  - ∫ μ in (0)..X, ((2 * μ ^ 2 * Ω ^ 2) / (μ ^ 2 + Ω ^ 2) ^ 2) * ρ μ
 
 omit [DecidableEq N] in
 /-- Theorem: Verification that the Attractor Dimensionality flow is strictly monotonic. -/
@@ -152,4 +160,40 @@ theorem rg_flow_c_theorem_analog (μ_spectrum : N → ℝ) (Ω₁ Ω₂ : ℝ) (
     AttractorDimensionality μ_spectrum Ω₂ ≤ AttractorDimensionality μ_spectrum Ω₁ := by
   -- Leverage the existing finite variable monotonicity foundation
   apply rg_flow_finite_monotonicity μ_spectrum Ω₁ Ω₂ (le_of_lt h_Ω₁) h_step
+
+theorem continuous_rg_flow_monotonicity (ρ : ℝ → ℝ) (Ω X : ℝ) (h_Ω : 0 < Ω) (hX : 0 ≤ X) (h_ρ_nonneg : ∀ μ, 0 ≤ ρ μ) :
+  ContinuousAttractorDimensionalityRGFlow ρ Ω X ≤ 0 := by
+  simp only [ContinuousAttractorDimensionalityRGFlow, Left.neg_nonpos_iff]
+  apply intervalIntegral.integral_nonneg hX
+  intro μ _
+  have h_frac : 0 ≤ (2 * μ ^ 2 * Ω ^ 2) / (μ ^ 2 + Ω ^ 2) ^ 2 := by
+    apply div_nonneg <;> positivity
+  exact mul_nonneg h_frac (h_ρ_nonneg μ)
+
+theorem continuous_rg_flow_finite_monotonicity (ρ : ℝ → ℝ) (Ω₁ Ω₂ X : ℝ) (h_Ω₁ : 0 < Ω₁) (h_step : Ω₁ ≤ Ω₂) (hX : 0 ≤ X)
+  (h_ρ_nonneg : ∀ μ, 0 ≤ ρ μ)
+  (h_int1 : IntervalIntegrable (fun μ => (μ ^ 2 / (μ ^ 2 + Ω₁ ^ 2)) * ρ μ) volume 0 X)
+  (h_int2 : IntervalIntegrable (fun μ => (μ ^ 2 / (μ ^ 2 + Ω₂ ^ 2)) * ρ μ) volume 0 X) :
+  ContinuousAttractorDimensionality ρ Ω₂ X ≤ ContinuousAttractorDimensionality ρ Ω₁ X := by
+  unfold ContinuousAttractorDimensionality
+  -- Restructure the goal into a subtraction template: 0 ≤ ∫ Ω₁ - ∫ Ω₂
+  rw [← sub_nonneg, ← intervalIntegral.integral_sub h_int1 h_int2]
+  apply intervalIntegral.integral_nonneg hX
+  intro μ _
+  -- Isolate the shared distribution factor
+  rw [← sub_mul]
+  have h_diff : 0 ≤ (μ ^ 2 / (μ ^ 2 + Ω₁ ^ 2)) - (μ ^ 2 / (μ ^ 2 + Ω₂ ^ 2)) := by
+    by_cases h_μ : μ = 0
+    · simp [h_μ]
+    · have h_μ2 : 0 < μ ^ 2 := sq_pos_of_ne_zero h_μ
+      have h_om1 : 0 < Ω₁ ^ 2 := sq_pos_of_ne_zero (ne_of_gt h_Ω₁)
+      have h_om2 : 0 < Ω₂ ^ 2 := sq_pos_of_ne_zero (ne_of_gt (lt_of_lt_of_le h_Ω₁ h_step))
+      have h_den_step : μ ^ 2 + Ω₁ ^ 2 ≤ μ ^ 2 + Ω₂ ^ 2 := by
+        gcongr
+      have h_div : μ ^ 2 / (μ ^ 2 + Ω₂ ^ 2) ≤ μ ^ 2 / (μ ^ 2 + Ω₁ ^ 2) := by
+        rw [div_le_div_iff₀ (by positivity) (by positivity)]
+        nlinarith
+      exact sub_nonneg.mpr h_div
+  exact mul_nonneg h_diff (h_ρ_nonneg μ)
+
 
