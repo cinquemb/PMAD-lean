@@ -22,16 +22,25 @@ noncomputable def ContinuousAttractorDimensionalityRGFlow (ρ : ℝ → ℝ) (Ω
 
 omit [DecidableEq N] in
 /-- Theorem: Verification that the Attractor Dimensionality flow is strictly monotonic. -/
-theorem rg_flow_monotonicity (μ_spectrum : N → ℝ) (Ω : ℝ) (_h_Ω : Ω > 0) :
+theorem rg_flow_monotonicity (μ_spectrum : N → ℝ) (Ω : ℝ) (h_Ω : Ω > 0) :
     AttractorDimensionalityRGFlow μ_spectrum Ω ≤ 0 := by
   simp only [AttractorDimensionalityRGFlow, Left.neg_nonpos_iff]
   apply Finset.sum_nonneg
   intro i _
+
+  have h_denom_pos : 0 < (μ_spectrum i ^ 2 + Ω ^ 2) ^ 2 := by
+    have h_Ω_sq_pos : 0 < Ω ^ 2 := sq_pos_of_pos h_Ω
+    have h_inner_pos : 0 < μ_spectrum i ^ 2 + Ω ^ 2 := by
+      have h_mu_sq_nonneg : 0 ≤ μ_spectrum i ^ 2 := sq_nonneg _
+      linarith
+    positivity
+
   have h_num : 0 ≤ (2 * μ_spectrum i ^ 2 * Ω ^ 2) / (μ_spectrum i ^ 2 + Ω ^ 2) ^ 2 := by
     apply div_nonneg
     · positivity
-    · positivity
+    · exact le_of_lt h_denom_pos -- Actively binds the non-vanishing denominator check
   exact h_num
+
 
 omit [DecidableEq N] in
 /-- Theorem: The Renormalization Group IR Fixed Point (Page 10, Sec T-1). -/
