@@ -181,20 +181,21 @@ theorem gradient_descent_runtime_linearity
   have h_poly := executionStepCount_polynomial cfg
   
   -- 2. Actively use the incoming gradient optimization hypotheses to set the bounds
-  -- LOAD-BEARING COUPLING: We force optimization progress to strictly depend on the RG C decay
+  -- Force optimization progress to strictly depend on the RG C decay
   have h_optimization_progress : η * gradE > 0 := by
     have h_c_theorem := rg_flow_c_theorem_analog μ_spectrum Ω (Ω + 1) h_Ω (by linarith)
     have h_decay : AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1) ≥ 0 := by linarith [h_c_theorem]
     have h_gradE_positive : gradE > 0 := by linarith [h_gradE, h_decay]
     exact mul_pos h_η h_gradE_positive
 
-  have _h_step_is_valid : PhaseGradientStep Ω gradE η = Ω - η * gradE := rfl
-  
   -- Forced verification step: Converts absolute values into a linear solver target
   have h_linear_contract : PhaseGradientStep Ω gradE η - r < Ω - r := by
     have h_abs1 : |PhaseGradientStep Ω gradE η - r| = PhaseGradientStep Ω gradE η - r := abs_of_pos (by linarith [h_bounds.2])
     have h_abs2 : |Ω - r| = Ω - r := abs_of_pos (by linarith [h_bounds.1])
+    -- Unfold the definition inline right where it is mathematically needed
+    unfold PhaseGradientStep
     linarith [h_contractive, h_abs1, h_abs2]
+
 
   -- 3. Verify that the 2-bit initial configuration boundary matches pmad architecture safety floor
   have h_floor_match : (cfg.m : ℝ) ≥ 2 := by
