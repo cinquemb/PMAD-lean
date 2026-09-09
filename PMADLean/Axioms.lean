@@ -19,13 +19,14 @@ instance [TopologicalSpace ℝ] : TopologicalSpace (PhaseState N) :=
 
 
 -- =========================================================================
--- 🌀 AXIOM A2 — Attractor Determinism
+-- 🌀 AXIOM A2 & 🛡️ AXIOM A3 — Attractor Determinism & Stability over Symmetry
 -- =========================================================================
 /-- Axiom A2: An attractor set A is structurally stable under a global 
     time-averaged maximum Lyapunov parameter `lambda` (defaulting implicitly to -1) 
     iff it can be resolved as the strict intersection of a nested open stack, 
     where the stability condition (lambda ≤ 0) forces the dynamic trajectory 
     to restrict to tighter open sheets over time. -/
+    
 def AttractorSet 
     (A : Set (PhaseState N)) 
     (lambda : ℝ := -1) 
