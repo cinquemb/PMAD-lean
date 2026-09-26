@@ -8,7 +8,11 @@ import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Bounds
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.IntegrationByParts
 
+namespace PMADLean.Probability
+
 open BigOperators Filter MeasureTheory Complex Topology ComplexConjugate
+open PMADLean.Axioms
+open PMADLean.Dynamics
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
@@ -583,3 +587,5 @@ theorem data_pipeline_discretization_bound
 
     |ϕ t - ϕ (n * Δt)| ≤ L * |t - n * Δt| := h_bound
     _ ≤ L * Δt := mul_le_mul_of_nonneg_left h_dist h_L
+
+end PMADLean.Probability

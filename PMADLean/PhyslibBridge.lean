@@ -1,4 +1,5 @@
 import PMADLean.Axioms
+import PMADLean.Dynamics
 import PMADLean.Probability
 
 import QuantumInfo.States.Pure.Braket
@@ -7,9 +8,14 @@ import QuantumInfo.Channels.Bundled
 import QuantumInfo.Channels.CPTP
 import QuantumInfo.Channels.Unbundled
 
+namespace PMADLean.PhyslibBridge
+
 open Topology Complex Filter Braket 
 open scoped Matrix
 open Finset
+open PMADLean.Axioms
+open PMADLean.Dynamics
+open PMADLean.Probability
 
 variable {N : Type*} [Fintype N] [DecidableEq N]
 
@@ -301,3 +307,5 @@ theorem pmad_flow_tracks_bundled_cptp_output
 
   -- 4. Linearly aggregate the independent non-equilibrium error parameters (4BT + 4BT = 8BT)
   linarith
+
+end PMADLean.PhyslibBridge

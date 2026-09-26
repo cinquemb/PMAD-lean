@@ -4,7 +4,12 @@ import PMADLean.Metrics
 import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 
+namespace PMADLean.Renormalization
+
 open BigOperators Filter Matrix Set MeasureTheory Topology
+open PMADLean.Axioms
+open PMADLean.Dynamics
+open PMADLean.Metrics
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
@@ -205,4 +210,4 @@ theorem continuous_rg_flow_finite_monotonicity (ρ : ℝ → ℝ) (Ω₁ Ω₂ X
       exact sub_nonneg.mpr h_div
   exact mul_nonneg h_diff (h_ρ_nonneg μ)
 
-
+end PMADLean.Renormalization

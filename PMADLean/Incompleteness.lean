@@ -2,6 +2,12 @@ import PMADLean.Axioms
 import PMADLean.Dynamics
 import PMADLean.Metrics
 
+namespace PMADLean.Incompleteness
+
+open PMADLean.Axioms
+open PMADLean.Dynamics
+open PMADLean.Metrics
+
 -- Propagate index tracking properties globally over the manifold sectors
 variable {Nvis Nhid : Type*} [DecidableEq Nvis] [DecidableEq Nhid] [Fintype Nvis] [Fintype Nhid]
 
@@ -142,5 +148,4 @@ theorem mutation_preserves_metric_regularity
   -- the target collapses to an identity statement closed natively by rfl.
   use SeedEmergentMetric (mutate_seed seed k) ε h_ε
 
-
-
+end PMADLean.Incompleteness

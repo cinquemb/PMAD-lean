@@ -3,6 +3,8 @@ import Mathlib.Order.Filter.Basic
 import Mathlib.Topology.Basic
 import Mathlib.Analysis.SpecialFunctions.Exp
 
+namespace PMADLean.Axioms
+
 open Filter
 
 variable (N : Type*) [Finite N]
@@ -48,3 +50,5 @@ def AttractorSet
 -- =========================================================================
 def UbiquitousResonance (R : N → N → ℝ) : Prop :=
   ∀ i j, 0 < R i j ∧ R i j ≤ 1
+  
+end PMADLean.Axioms

@@ -7,7 +7,14 @@ import PMADLean.Metrics
 import PMADLean.Probability
 import PMADLean.Renormalization
 
+namespace PMADLean.Test
+
 open Real Filter Topology
+open PMADLean.Axioms
+open PMADLean.Dynamics
+open PMADLean.Metrics
+open PMADLean.Probability
+open PMADLean.Renormalization
 
 /-- Parameters and physical layout configuration matching spiral-vm C++ architecture. -/
 structure SpiralAlgoConfig where
@@ -381,3 +388,5 @@ theorem stochastic_gradient_linearity
   have h_poly := h_subexp_and_poly.2
 
   exact ⟨L_con, h_subexp, h_poly, h_probability_bound⟩
+
+end PMADLean.Test

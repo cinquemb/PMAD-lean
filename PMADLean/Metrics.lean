@@ -8,7 +8,12 @@ import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
 import Mathlib.Topology.MetricSpace.Basic
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
 
+namespace PMADLean.Metrics
+
 open BigOperators Matrix Complex Topology
+open PMADLean.Axioms
+open PMADLean.Dynamics
+open PMADLean.Probability
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
@@ -406,3 +411,5 @@ theorem thermodynamic_density_regularity_bound
   -- 2. Isolate the fractional scalar division matrix to complete the density envelope cleanly
   rw [div_le_iff₀ h_card]
   linarith
+
+end PMADLean.Metrics

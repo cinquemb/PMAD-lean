@@ -6,8 +6,11 @@ import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 import Mathlib.Topology.NhdsSet
 import Mathlib.Algebra.Polynomial.Laurent
 
+namespace PMADLean.Dynamics
 
-open BigOperators Filter MeasureTheory Topology LaurentPolynomial
+open BigOperators Filter MeasureTheory Topology LaurentPolynomial 
+open PMADLean.Axioms
+
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
@@ -403,3 +406,5 @@ theorem cluster_flow_converges_to_attractor
     exact h_unshielded_collapse ϕ' h_not_class1 t ht lambda_bound h_lambda i j
   -- Step 2: Invoke the main PMAD convergence engine cleanly using the compiled proofs
   exact pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction h_torus_wrap
+
+end PMADLean.Dynamics

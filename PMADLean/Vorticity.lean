@@ -6,7 +6,14 @@ import PMADLean.Renormalization
 import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Algebra.BigOperators.Intervals
 
+namespace PMADLean.Vorticity
+
 open BigOperators Filter Matrix Complex MeasureTheory Topology ComplexConjugate
+open PMADLean.Axioms
+open PMADLean.Dynamics
+open PMADLean.Metrics
+open PMADLean.Probability
+open PMADLean.Renormalization
 
 variable {N : Type*} [DecidableEq N] [Fintype N]
 
@@ -1040,3 +1047,4 @@ theorem macroscopic_geodesic_completeness_invariant
   -- 4. Close the inequality parameters instantly under unified variables
   linarith [h_base, h_M, h_Q_sq]
 
+end PMADLean.Vorticity
