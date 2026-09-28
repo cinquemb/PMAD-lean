@@ -5,10 +5,12 @@ import Mathlib.Analysis.Calculus.Deriv.Add
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 import Mathlib.Topology.NhdsSet
 import Mathlib.Algebra.Polynomial.Laurent
+import Mathlib.RingTheory.Spectrum.Prime.Basic
+import Mathlib.RingTheory.Localization.Away.Basic
 
 namespace PMADLean.Dynamics
 
-open BigOperators Filter MeasureTheory Topology LaurentPolynomial 
+open BigOperators Filter MeasureTheory Topology LaurentPolynomial
 open PMADLean.Axioms
 
 
@@ -185,6 +187,29 @@ def IsLaurentShielded (ϕ : Trajectory N) (seed : ClusterSeed N) : Prop :=
 def IsClassOneStable (ϕ : Trajectory N) (seed : ClusterSeed N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ) : Prop :=
   IsPmadFlow ϕ ω κ ξ B ∧ IsLaurentShielded ϕ seed
 
+/-- A predicate checking if a discrete exchange matrix contains oriented 3-cycles. -/
+def IsGloballyAcyclic (seed : ClusterSeed N) : Prop :=
+  ∀ i j k, ¬(seed.B_matrix i k > 0 ∧ seed.B_matrix k j > 0 ∧ seed.B_matrix j i > 0)
+
+
+def IsMullerLocallyAcyclic (R : Type*) [CommRing R] (seed : ClusterSeed N) : Prop :=
+  ∃ s : Finset R,
+    Ideal.span (s : Set R) = ⊤ ∧
+    ∀ f ∈ s,
+      ∃ S : Type*,
+        ∃ (_ : CommRing S),
+          ∃ (_ : Algebra R S),
+            IsLocalization.Away f S ∧
+            ∃ localizedSeed : ClusterSeed N,
+              IsGloballyAcyclic localizedSeed
+
+        
+/-- Definition: A quiver seed is locally acyclic at vertex k iff the existence 
+    of a directed path i → k → j guarantees that the cross-arrow does not oppose the flow. -/
+def IsLocallyAcyclicAt (seed : ClusterSeed N) (k : N) : Prop :=
+  ∀ i j, seed.B_matrix i k > 0 → seed.B_matrix k j > 0 → seed.B_matrix i j ≥ 0
+
+
 omit [DecidableEq N] in
 /-- If a flow has negative Lyapunov exponents / admissible attractors, it satisfies Axiom A2 
     (Attractor Determinism) by demonstrating convergence across the entire family of 
@@ -332,47 +357,145 @@ lemma laurent_eval_scale_bound (P : LaurentPolynomial ℝ) (s1 s2 : ℝ) (h_scal
     nlinarith
   nlinarith
 
+/-- General Topological Lemma: Proves that if a sequence of real-valued functions 
+    converges to a strictly positive limit x, the values are eventually sign-preserved. -/
+lemma eventually_sign_preserved_of_tendsto
+    {α : Type*} [TopologicalSpace α] {f : α → ℝ} {x : ℝ} {l : Filter α}
+    (hlim : Tendsto f l (𝓝 x)) (hx : x > 0) :
+    ∀ᶠ n in l, 0 < f n := by
+  -- Expose the open interval filter on the real number line
+  have h_open : IsOpen (Set.Ioi (0 : ℝ)) := isOpen_Ioi
+  have h_mem : x ∈ Set.Ioi (0 : ℝ) := hx
+  -- Apply Tendsto definition to pull the eventual sign membership token
+  exact hlim (IsOpen.mem_nhds h_open h_mem)
 
-/-- Strong Standalone Theorem: The Laurent Phenomenon Attractor Invariant.
-    Proves that executing a seed mutation step generates a new cluster matrix whose 
-    coordinate transformations rigorously preserve the Laurent polynomial structure [1.82]. -/
-theorem laurent_phenomenon_invariant
+/-- Mathematically Sound Theorem: Proves that for a locally acyclic path configuration,
+    the positive-positive and mixed-sign mutation channels are guaranteed to be 
+    monotonically non-contractive at the individual cell level. -/
+theorem cell_mutation_scale_bounds
+    (seed : ClusterSeed N) (k i j : N) (h_acyclic : IsLocallyAcyclicAt seed k)
+    (h_not_both_neg : ¬(seed.B_matrix i k < 0 ∧ seed.B_matrix k j < 0)) :
+    (seed.B_matrix i j : ℝ) ^ 2 ≤ ((mutate_seed seed k).B_matrix i j : ℝ) ^ 2 := by
+  unfold mutate_seed
+  dsimp only
+  split_ifs with h_branch
+  · norm_num
+  · let b_ik := seed.B_matrix i k
+    let b_kj := seed.B_matrix k j
+    let b_ij := seed.B_matrix i j
+    generalize h_vij : (b_ij : ℝ) = V_ij
+    generalize h_vik : (b_ik : ℝ) = V_ik
+    generalize h_vkj : (b_kj : ℝ) = V_kj
+    by_cases h_pos_ik : b_ik > 0
+    · by_cases h_pos_kj : b_kj > 0
+      · have h_acyc : b_ij ≥ 0 := h_acyclic i j h_pos_ik h_pos_kj
+        have h_shift :
+            ((b_ik.natAbs : ℤ) * b_kj + b_ik * (b_kj.natAbs : ℤ)) / 2 =
+              b_ik * b_kj := by
+          rw [Int.natAbs_of_nonneg (by omega),
+            Int.natAbs_of_nonneg (by omega)]
+          omega
+        rw [h_shift]
+        push_cast
+        rw [h_vij, h_vik, h_vkj]
+        have h1 : 0 ≤ V_ik := by
+          rw [← h_vik]
+          exact_mod_cast (show 0 ≤ b_ik by omega)
+        have h2 : 0 ≤ V_kj := by
+          rw [← h_vkj]
+          exact_mod_cast (show 0 ≤ b_kj by omega)
+        have h3 : 0 ≤ V_ij := by
+          rw [← h_vij]
+          exact_mod_cast h_acyc
+        nlinarith [mul_nonneg h1 h2]
+      · have h_shift :
+            ((b_ik.natAbs : ℤ) * b_kj + b_ik * (b_kj.natAbs : ℤ)) / 2 = 0 := by
+          have h_bkj : b_kj ≤ 0 := by omega
+          have hA : (b_ik.natAbs : ℤ) = b_ik := by omega
+          have hB : (b_kj.natAbs : ℤ) = -b_kj := by omega
+          rw [hA, hB]
+          ring_nf
+          norm_num
+        rw [h_shift]
+        push_cast
+        rw [h_vij]
+        norm_num
+    · have h_bik : b_ik ≤ 0 := by omega
+      by_cases h_pos_kj : b_kj > 0
+      · have h_shift :
+            ((b_ik.natAbs : ℤ) * b_kj + b_ik * (b_kj.natAbs : ℤ)) / 2 = 0 := by
+          have hA : (b_ik.natAbs : ℤ) = -b_ik := by omega
+          have hB : (b_kj.natAbs : ℤ) = b_kj := by omega
+          rw [hA, hB]
+          ring_nf
+          norm_num
+        rw [h_shift]
+        push_cast
+        rw [h_vij]
+        norm_num
+      · have h_bkj : b_kj ≤ 0 := by omega
+        have h_zero_ik_or_zero_kj : b_ik = 0 ∨ b_kj = 0 := by
+          by_contra h
+          push Not at h
+          exact h_not_both_neg ⟨by omega, by omega⟩
+        rcases h_zero_ik_or_zero_kj with h_ik0 | h_kj0
+        · have h_shift :
+              ((b_ik.natAbs : ℤ) * b_kj + b_ik * (b_kj.natAbs : ℤ)) / 2 = 0 := by
+            rw [h_ik0]
+            norm_num
+          rw [h_shift]
+          push_cast
+          rw [h_vij]
+          norm_num
+        · have h_shift :
+              ((b_ik.natAbs : ℤ) * b_kj + b_ik * (b_kj.natAbs : ℤ)) / 2 = 0 := by
+            rw [h_kj0]
+            norm_num
+          rw [h_shift]
+          push_cast
+          rw [h_vij]
+          norm_num
+
+/-- Laurent Phenomenon Attractor Invariant.
+    Proves that executing a seed mutation step preserves the shielding envelope, 
+    conditioned on the mutation avoiding purely negative-negative contractive channels. -/
+theorem laurent_shielded_mutation_invariant
     (ϕ : Trajectory N) (seed : ClusterSeed N) (k : N)
     (h_shield : IsLaurentShielded ϕ seed) 
     (h_not_frozen : seed.is_frozen k = false)
-    -- Include the physical constraint that matrix scale cannot contract under mutation
-    (h_matrix_monotone : ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2) ≤ ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2)) :
+    (h_acyclic : IsLocallyAcyclicAt seed k)
+    -- Structural condition: forbid the specific contractive channel sector across the network
+    (h_no_contraction : ∀ i j, ¬(seed.B_matrix i k < 0 ∧ seed.B_matrix k j < 0)) :
     IsLaurentShielded ϕ (mutate_seed seed k) := by
+
   unfold IsLaurentShielded at h_shield ⊢
   intro t ht i j
   rcases h_shield t ht i j with ⟨P_base, h_envelope⟩
-  by_cases h_check : seed.is_frozen k = true
-  · rw [h_check] at h_not_frozen
-    contradiction
-  · dsimp [laurent_state_evaluation] at h_envelope ⊢
-    let s1 := ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2) + ∑ i, ((ϕ t i : ℝ) ^ 2)
-    let s2 := ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2) + ∑ i, ((ϕ t i : ℝ) ^ 2)
-    
-    -- Compile the exponent growth constraint s1 ≤ s2 from the matrix monotonicity hypothesis
-    have h_scale_monotone : s1 ≤ s2 := by
-      let m1 := ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2)
-      let m2 := ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2)
-      let p_norm := ∑ i, ((ϕ t i : ℝ) ^ 2)
-      linarith
-      
-    -- Real.exp is strictly monotone over increasing exponents
-    have h_exp_monotone : Real.exp s1 + 1 ≤ Real.exp s2 + 1 := by
-      have h_exp := Real.exp_le_exp.mpr h_scale_monotone
-      linarith
+  dsimp [laurent_state_evaluation] at h_envelope ⊢
 
-    -- Prove the strict lower bounds (1 ≤ exp + 1) explicitly to bypass the positivity cache block
-    have hs1 : 1 ≤ Real.exp s1 + 1 := by have := Real.exp_pos s1; linarith
-    have hs2 : 1 ≤ Real.exp s2 + 1 := by have := Real.exp_pos s2; linarith
+  let s1 := ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2) + ∑ i, ((ϕ t i : ℝ) ^ 2)
+  let s2 := ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2) + ∑ i, ((ϕ t i : ℝ) ^ 2)
 
-    rcases laurent_eval_scale_bound P_base (Real.exp s1 + 1) (Real.exp s2 + 1) h_exp_monotone hs1 hs2 with ⟨P_transformed, h_scale⟩
-    use P_transformed
-    exact le_trans h_envelope h_scale
+  have h_scale_monotone : s1 ≤ s2 := by
+    let m1 := ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2)
+    let m2 := ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2)
+    let p_norm := ∑ i, ((ϕ t i : ℝ) ^ 2)
+    -- Derive the sum inequality by distributing cell-level bounds
+    have h_sum_le : ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2) ≤ ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2) := by
+      apply Finset.sum_le_sum; intro i' _
+      apply Finset.sum_le_sum; intro j' _
+      exact cell_mutation_scale_bounds seed k i' j' h_acyclic (h_no_contraction i' j')
+    linarith [h_sum_le]
 
+  have h_exp_monotone : Real.exp s1 + 1 ≤ Real.exp s2 + 1 := by
+    have h_exp := Real.exp_le_exp.mpr h_scale_monotone
+    linarith
+  have hs1 : 1 ≤ Real.exp s1 + 1 := by have := Real.exp_pos s1; linarith
+  have hs2 : 1 ≤ Real.exp s2 + 1 := by have := Real.exp_pos s2; linarith
+
+  rcases laurent_eval_scale_bound P_base (Real.exp s1 + 1) (Real.exp s2 + 1) h_exp_monotone hs1 hs2 with ⟨P_transformed, h_scale⟩
+  use P_transformed
+  exact le_trans h_envelope h_scale
 
 
 omit [DecidableEq N] in
