@@ -159,7 +159,7 @@ noncomputable def laurent_space_eval (P : LaurentPolynomial ℝ) (x : ℝ) : ℝ
   let p_coeff := |P.coeff 0|
   -- A smooth, continuous rational limit function (saturation filter).
   -- If P = 0, p_coeff = 0, causing the entire weight to collapse smoothly to 0.
-  -- As the polynomial's algebraic structure grows complex (p_coeff → ∞), 
+  -- As the polynomial's algebraic STRUCTURE grows complex (p_coeff → ∞), 
   -- the fraction smoothly asymptotically approaches a maximal saturation limit of 1.
   let ring_norm_weight := p_coeff / (p_coeff + 1)
   -- Maintain the strict quadratic coupling to the continuous metric space

@@ -154,7 +154,7 @@ theorem pmad_rg_attractor_convergence_time
     (μ_spectrum : M → ℝ) (Ω₁ Ω₂ : ℝ) (h_Ω₁ : 0 < Ω₁) (h_step : Ω₁ ≤ Ω₂) 
     (lambda_max : ℝ → ℝ) (h_stable : IsAdmissibleAttractor lambda_max)
     
-    -- This matches what your circular theorem actually expects as its first hypothesis input:
+    -- This matches what your circular THEOREM actually expects as its first hypothesis input:
     (h_spectral_contraction : ∀ (ϕ' : Trajectory M), IsPmadFlow ϕ' ω κ ξ B → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
     (h_torus_wrap : ∀ (ϕ' : Trajectory M), ¬ IsPmadFlow ϕ' ω κ ξ B → 
