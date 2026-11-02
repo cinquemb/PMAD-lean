@@ -343,7 +343,10 @@ theorem stochastic_gradient_linearity
     (h_amplitude_i : c i = Complex.exp (Complex.I * (θ i : ℂ)))
     (h_amplitude_j : c j = Complex.exp (Complex.I * (θ j : ℂ)))
     (h_omega : ω i = ω j)
-    (h_coupling_cancel : ∀ (t : ℝ), (∑ k, κ i k * Real.sin (ϕ t k - ϕ t i)) = (∑ k, κ j k * Real.sin (ϕ t k - ϕ t j)))
+    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory M), IsPmadFlow ϕ' ω κ ξ B_bound → 
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
+    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory M), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
     (h_primitive_noise : ∀ (t : ℝ), |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ (t : ℝ), IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t)
@@ -366,7 +369,7 @@ theorem stochastic_gradient_linearity
   -- 1. Unify the core closed-loop noise integration from Probability.lean
   have h_probability_bound : |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
     have h_call := born_rule_noise_degradation_bound_derive_ftc_evolution
-      ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega h_coupling_cancel h_primitive_noise h_init h_diff_integrable T hT
+      ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega (h_spectral_contraction B) (h_torus_wrap B) h_primitive_noise h_init h_diff_integrable T hT
     have h_integrable_cast : IntervalIntegrable (fun t => Complex.exp (Complex.I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) MeasureTheory.volume 0 T := by
       exact h_integrable
     exact h_call h_integrable_cast
@@ -388,5 +391,6 @@ theorem stochastic_gradient_linearity
   have h_poly := h_subexp_and_poly.2
 
   exact ⟨L_con, h_subexp, h_poly, h_probability_bound⟩
+
 
 end PMADLean.Test

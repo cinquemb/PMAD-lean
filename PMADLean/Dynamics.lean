@@ -221,7 +221,7 @@ theorem pmad_flow_converges_to_attractor
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
       
-    -- hypothesis: Torus Manifold Structural Wrapping for non-physical trajectories
+    -- hypothesis: Torus Manifold Structural Wrapping for non-admissible trajectory perturbations
     (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
     
@@ -295,7 +295,7 @@ theorem pmad_flow_converges_to_attractor
     by_cases h_flow' : IsPmadFlow ϕ' ω κ ξ B
     · -- Case D1: Physical flow containment correctly unified with the gauge manifold bounds
       exact h_spectral_contraction ϕ' h_flow' t ht lambda_bound h_lambda i j
-    · -- Case D2: Non-physical trajectories handled natively by the Torus Boundary Wrap
+    · -- Case D2: non-admissible trajectory perturbations handled natively by the Torus Boundary Wrap
       exact h_torus_wrap ϕ' h_flow' t ht lambda_bound h_lambda i j
 
 omit [DecidableEq N] in

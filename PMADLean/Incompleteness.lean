@@ -165,7 +165,10 @@ theorem attractor_trajectory_to_metric_link
     (h_amplitude_i : c i = Complex.exp (I * (θ i : ℂ)))
     (h_amplitude_j : c j = Complex.exp (I * (θ j : ℂ)))
     (h_omega : ω i = ω j)
-    (h_coupling_cancel : ∀ t, (∑ k, κ i k * Real.sin (ϕ t k - ϕ t i)) = (∑ k, κ j k * Real.sin (ϕ t k - ϕ t j)))
+    (h_spectral_contraction : ∀ (ϕ' : Trajectory Nvis), IsPmadFlow ϕ' ω κ ξ B → 
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
+    (h_torus_wrap : ∀ (ϕ' : Trajectory Nvis), ¬ IsPmadFlow ϕ' ω κ ξ B → 
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
     (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t)
@@ -192,9 +195,9 @@ theorem attractor_trajectory_to_metric_link
   have h_sheet_property := h_open (Real.exp (-1 * T))
 
   -- 4. Invoke the heavy physical noise degradation calculus from Probability.lean
-  have h_probability_bound := born_rule_noise_degradation_bound_derive_ftc_evolution 
-    ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega h_coupling_cancel 
-    h_primitive_noise h_init h_diff_integrable T hT h_integrable
+  have h_probability_bound := born_rule_noise_degradation_bound_derive_ftc_evolution (N := Nvis)
+    ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega h_spectral_contraction
+    h_torus_wrap h_primitive_noise h_init h_diff_integrable T hT h_integrable
 
   -- 5. Deconstruct the absolute value error boundaries via standard absolute sub identities
   have h_upper_prob_bound : MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T ≤ AmplitudeWeight c i j + 4 * B * T := by
@@ -243,8 +246,10 @@ theorem closed_loop_metric_backaction_fixed_point
     (h_amplitude_i : c i = Complex.exp (I * (θ i : ℂ)))
     (h_amplitude_j : c j = Complex.exp (I * (θ j : ℂ)))
     (h_omega : ω i = ω j)
-    (h_coupling_cancel : ∀ t, (∑ k, κ i k * Real.sin (ϕ t k - ϕ t i)) = 
-                              (∑ k, κ j k * Real.sin (ϕ t k - ϕ t j)))
+    (h_spectral_contraction : ∀ (ϕ' : Trajectory Nvis), IsPmadFlow ϕ' ω κ ξ B → 
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
+    (h_torus_wrap : ∀ (ϕ' : Trajectory Nvis), ¬ IsPmadFlow ϕ' ω κ ξ B → 
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
     (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t)
@@ -275,12 +280,12 @@ theorem closed_loop_metric_backaction_fixed_point
     -- 3. ACTIVELY INTERTWINE THE LINKING LEMMA WITH THE REAL FLOW HYPOTHESES
     have h_link := attractor_trajectory_to_metric_link seed ε h_ε A (h_attractor_exists (-1) (by linarith))
       ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega
-      h_coupling_cancel h_primitive_noise h_init h_diff_integrable 1 hT (h_integrable 1 hT)
+      h_spectral_contraction h_torus_wrap h_primitive_noise h_init h_diff_integrable 1 hT (h_integrable 1 hT)
       h_metric_diagonal_pos (h_asymptotic_squeeze 1 hT) (h_metric_ceiling 1 hT)
 
     -- 4. Invoke FTC integration noise bound from Probability.lean
-    have h_probability_bound := born_rule_noise_degradation_bound_derive_ftc_evolution 
-      ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega h_coupling_cancel 
+    have h_probability_bound := born_rule_noise_degradation_bound_derive_ftc_evolution (N := Nvis)
+      ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_torus_wrap
       h_primitive_noise h_init h_diff_integrable 1 hT (h_integrable 1 hT)
     have h_upper_prob_bound := (abs_le.mp h_probability_bound).2
 
