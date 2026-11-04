@@ -6,7 +6,6 @@ import PMADLean.Renormalization
 import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Algebra.BigOperators.Intervals
 import Mathlib.CategoryTheory.Category.Basic
-import Mathlib.CategoryTheory.Groupoid
 
 namespace PMADLean.Vorticity
 
@@ -2632,101 +2631,6 @@ theorem variety_invariant_is_sufficient_classification
   have h_transport_consequence := h_step_inv
 
   exact h_eq
-
-
-/-- COMPOSITION SPLITTING RULE
-    Proves that evaluating an extended path xs ++ [x] is equivalent to evaluating 
-    the sub-path xs first, and then executing a single MUTATION step x on the 
-    resulting intermediate chart state. -/
-lemma evaluate_chart_path_append
-    {N : Type*} [DecidableEq N] [Fintype N] (B_init : N → N → ℝ) 
-    (chart_init : VarietyChart N) (xs : List N) (x : N) :
-    evaluate_chart_path B_init chart_init (xs ++ [x]) = 
-    evaluate_chart_path B_init (evaluate_chart_path B_init chart_init xs) [x] := by
-  induction xs generalizing chart_init with
-  | nil => 
-    rfl
-  | cons head tail ih => 
-    dsimp [evaluate_chart_path]
-    rw [ih]
-    -- The INDUCTIVE step unrolls the remaining [x] block definitionally,
-    -- allowing both records to unify flawlessly.
-    rfl
-
-
-/-- MATRIX SEQUENCE APPEND LEMMA
-    Rigorously establishes that mutating a matrix sequence along an appended path 
-    xs ++ [x] is definitionally equal to taking the sequence resulting from xs 
-    and applying a single additional MUTATION step x. -/
-lemma mutate_matrix_real_seq_append
-    {N : Type*} [DecidableEq N] [Fintype N] (B : N → N → ℝ) (xs : List N) (x : N) :
-    mutate_matrix_real_seq B (xs ++ [x]) = 
-    mutate_matrix_real (mutate_matrix_real_seq B xs) x := by
-  induction xs generalizing B with
-  | nil => rfl
-  | cons head tail ih => 
-    dsimp [mutate_matrix_real_seq]
-    rw [ih]
-
-/-- THE GROUPOID RESTART COMPATIBILITY THEOREM 
-    Rigorously establishes the path-restart property across the variety tree.
-    REVERSED STRUCTURE INDUCTION: Uses List.reverseRecOn over an arbitrary chart 
-    state 's' to append elements to the end of the MUTATION corridor. This matches 
-    Lean's accumulator definitionally, allowing the induction step to close natively 
-    via rfl without a single axiom, sorry, or type mismatch! -/
-lemma evaluate_chart_path_restart_invariant_generalized
-    {N : Type*} [DecidableEq N] [Fintype N]
-    (B_global : N → N → ℝ)
-    (s : VarietyChart N) (path : List N) (i j : N) :
-    (evaluate_chart_path (mutate_matrix_real_seq s.B path)
-      { B := mutate_matrix_real_seq s.B path,
-        C := fun u v => (evaluate_chart_path B_global s path).C u v,
-        G := fun u v => (evaluate_chart_path B_global s path).G u v }
-      []).G i j =
-    (evaluate_chart_path B_global s path).G i j := by
-  rfl
-
-
-/-- The specialized top-level corollary initialized at the base seed matrix baseline -/
-lemma evaluate_chart_path_restart_invariant
-    {N : Type*} [DecidableEq N] [Fintype N]
-    (seed : ClusterSeed N)
-    (seed_C seed_G : N → N → ℝ)
-    (path : List N) (i j : N) :
-
-    (evaluate_chart_path
-      (mutate_matrix_real_seq (fun u v => ↑(seed.B_matrix u v)) path)
-      { B := mutate_matrix_real_seq (fun u v => ↑(seed.B_matrix u v)) path,
-        C := fun u v =>
-          (evaluate_chart_path
-            (fun u v => ↑(seed.B_matrix u v))
-            { B := fun u v => ↑(seed.B_matrix u v),
-              C := seed_C,
-              G := seed_G }
-            path).C u v,
-        G := fun u v =>
-          (evaluate_chart_path
-            (fun u v => ↑(seed.B_matrix u v))
-            { B := fun u v => ↑(seed.B_matrix u v),
-              C := seed_C,
-              G := seed_G }
-            path).G u v }
-      []).G i j
-    =
-    (evaluate_chart_path
-      (fun u v => ↑(seed.B_matrix u v))
-      { B := fun u v => ↑(seed.B_matrix u v),
-        C := seed_C,
-        G := seed_G }
-      path).G i j := by
-
-  exact evaluate_chart_path_restart_invariant_generalized
-    (fun u v => ↑(seed.B_matrix u v))
-    (VarietyChart.mk
-      (fun u v => ↑(seed.B_matrix u v))
-      seed_C
-      seed_G)
-    path i j
 
 /-- PHASE 3: THE ORE-TYPE INVARIANCE THEOREM (TRANSPORT FORM)
 
