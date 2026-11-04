@@ -2440,10 +2440,10 @@ theorem pmad_morphism_respects_path_concatenation
   -- Step 1: Pass only the streamlined algebraic matrix bindings to match the clean signature
   rw [quasienergy_sideband_invariance_under_mutation seed_B seed_C seed_G path1 path2 i j]
         
-  -- Step 2: Use the generalized path lemma in the FORWARD direction on the goal
+  -- Step 2: Use the generalized path in the FORWARD direction on the goal
   rw [evaluate_chart_path_generalized]
   
-  -- Step 3: Instantiate the core physical realization theorem
+  -- Step 3: Instantiate the core physical realization
   have h_phys := pmad_realizes_exchange_graph_morphism C_seq G_seq seed_C seed_G (path1 ++ path2) i j
     ϕ ω κ ξ seed θ c h_amplitude_global h_omega_global h_spectral_contraction h_torus_wrap h_init_global 
     B h_B_nonneg h_flow h_primitive_noise_global h_diff_integrable_global h_integrable_global 
@@ -2606,7 +2606,7 @@ theorem variety_invariant_is_sufficient_classification
     h_G1_convergence h_G2_convergence
 
   -- Step 2: Instantiate verified Phase 2 transport over the macro invariant channel
-  -- Cleaned up to match the pure algebraic footprint of the updated macro current theorem
+  -- Cleaned up to match the pure algebraic footprint of the updated macro current
   let seed_B := fun (u v : N) => (seed.B_matrix u v : ℝ)
   have h_step_inv := macro_current_invariant_under_mutation seed_B seed_C seed_G path i j
     
@@ -2694,7 +2694,7 @@ theorem variety_invariant_separates_mutation_classes
 
   intro h_mutation_path_exists
 
-  -- Instantiate the mutation invariance lemma using the clean algebraic layout
+  -- Instantiate the mutation invariance using the clean algebraic layout
   have h_invariants_must_match :=
     variety_invariant_is_mutation_invariant
       B1 B2
@@ -2723,7 +2723,7 @@ theorem cluster_seed_non_equivalence_certificate
     
     ¬ RealMutationEquivalent seed_B1 seed_B2 := by
   
-  -- Feeds the streamlined parameters directly into the separated mutation class theorem
+  -- Feeds the streamlined parameters directly into the separated mutation class
   exact variety_invariant_separates_mutation_classes
     seed_B1 seed_B2 seed_B1 seed_C seed_G path i j rfl h_B2_init h_invariant_ne
 
