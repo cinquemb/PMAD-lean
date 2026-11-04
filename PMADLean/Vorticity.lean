@@ -2484,38 +2484,27 @@ theorem mutation_attractor_recurrent_intersection
     {N : Type*} [DecidableEq N] [Fintype N] (B1 B2 : N → N → ℝ)
     (C_seq G_seq1 G_seq2 : ℝ → N → N → ℝ) (seed_C seed_G : N → N → ℝ) (path : List N) (i j : N)
     (ϕ  ϕ1 ϕ2 : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ ξ1 ξ2 : ℝ → N → ℝ)
-    (seed : ClusterSeed N) (θ : N → ℝ) (c : N → ℂ)
+    (θ : N → ℝ) (c : N → ℂ)
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
     (μ_spectrum : N → ℝ) (Ω : ℝ → ℝ) (Ω_min : ℝ) (hΩ_min : 0 ≤ Ω_min)
     (h_rg_flow : ∀ t, Ω_min ≤ Ω t) (g : Matrix N N ℝ)
     (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N) (r : ℝ) (R_ϕ : ℝ) (hR_ϕ_nonneg : 0 ≤ R_ϕ)
     (h_phi_bound : ∀ t, |∑ i, ϕ1 t i| ≤ R_ϕ) (δ : ℝ) (hδ_pos : 0 < δ)
     (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ1 t)^2) (T : ℝ) (hT : 0 < T)
-    (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
-    (B_noise : ℝ) (h_B : 0 ≤ B_noise)
-    (h_flow1 : IsPmadFlow ϕ1 ω κ ξ1 B_noise)
-    (h_arnold_tongue : IsInArnoldTongue ω κ ξ1 B_noise ϕ1 h_flow1 T)
+    (B : ℝ) (h_B : 0 ≤ B)
+    (h_flow1 : IsPmadFlow ϕ1 ω κ ξ1 B)
+    (h_arnold_tongue : IsInArnoldTongue ω κ ξ1 B ϕ1 h_flow1 T)
     (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ1 t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ1 ω κ ξ1 B_noise h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
+      (κ i j * ‖PhaseOverlapFunctional ϕ1 ω κ ξ1 B h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
     (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ1 t PhaseVorticityTensor i j) - 
       (-(1 - ((2 * (∑ i, ϕ1 t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ1 t i (Ω t))^2) / ((PhaseOrderParameter ϕ1 t)^2))))| ≤ 
-      (Fintype.card N : ℝ)^2 * (4 * B_noise * T))
-    (h_omega_global : ∀ u v : N, ω u = ω v)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
-    (h_phi_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_primitive_noise_global : ∀ u v : N, ∀ T t : ℝ, |ξ t u - ξ t v| ≤ 2 * B T)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
-    (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2)
+      (Fintype.card N : ℝ)^2 * (4 * B * T))
     (h_G1_convergence : ∀ u v, Tendsto (fun T => G_seq1 T u v) atTop (𝓝 (seed_G u v)))
     (h_G2_convergence : ∀ u v, Tendsto (fun T => G_seq2 T u v) atTop (𝓝 (seed_G u v))) :
     AsymptoticGIntersection G_seq1 G_seq2 := by
   
   -- Step 1: Instantiate the microscale censorship limit envelope
-  have h_censorship := pmad_micro_censorship_alltime_noisy ω κ ξ1 B_noise h_B ϕ1 h_flow1
+  have h_censorship := pmad_micro_censorship_alltime_noisy ω κ ξ1 B h_B ϕ1 h_flow1
     PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow g h_substrate r R_ϕ hR_ϕ_nonneg 
     h_phi_bound δ hδ_pos h_order_bound T hT h_arnold_tongue h_vorticity_equilibrium h_emergence_envelope
     
@@ -2566,31 +2555,16 @@ theorem variety_invariant_is_sufficient_classification
     (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N) (r : ℝ) (R_ϕ : ℝ) (hR_ϕ_nonneg : 0 ≤ R_ϕ)
     (h_phi_bound : ∀ t, |∑ i, ϕ1 t i| ≤ R_ϕ) (δ : ℝ) (hδ_pos : 0 < δ)
     (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ1 t)^2) (T : ℝ) (hT : 0 < T)
-    (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
-    (B_noise : ℝ) (h_B : 0 ≤ B_noise)
-    (h_flow1 : IsPmadFlow ϕ1 ω κ ξ1 B_noise)
-    (h_diff_integrable_global : ∀ u v : N, ∀ T t : ℝ, IntervalIntegrable (fun s => ξ s u - ξ s v) volume 0 t)
-    (h_integrable_global : ∀ u v : N, ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t u : ℂ) - (ϕ t v : ℂ)))) volume 0 T)
-    (h_arnold_tongue : IsInArnoldTongue ω κ ξ1 B_noise ϕ1 h_flow1 T)
+    (B : ℝ) (h_B : 0 ≤ B)
+    (h_flow1 : IsPmadFlow ϕ1 ω κ ξ1 B)
+    (h_arnold_tongue : IsInArnoldTongue ω κ ξ1 B ϕ1 h_flow1 T)
     (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ1 t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ1 ω κ ξ1 B_noise h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
+      (κ i j * ‖PhaseOverlapFunctional ϕ1 ω κ ξ1 B h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
     (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ1 t PhaseVorticityTensor i j) - 
       (-(1 - ((2 * (∑ i, ϕ1 t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ1 t i (Ω t))^2) / ((PhaseOrderParameter ϕ1 t)^2))))| ≤ 
-      (Fintype.card N : ℝ)^2 * (4 * B_noise * T))
-    (h_omega_global : ∀ u v : N, ω u = ω v)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
-    (h_phi_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_primitive_noise_global : ∀ u v : N, ∀ T t : ℝ, |ξ t u - ξ t v| ≤ 2 * B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
-    (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2)
+      (Fintype.card N : ℝ)^2 * (4 * B * T))
     (h_G1_convergence : ∀ u v, Tendsto (fun T => G_seq1 T u v) atTop (𝓝 (seed_G u v)))
     (h_G2_convergence : ∀ u v, Tendsto (fun T => G_seq2 T u v) atTop (𝓝 (seed_G u v)))
-    (h_C_convergence : ∀ u v, Tendsto (fun T => C_seq T u v) atTop (𝓝 (seed_C u v)))
     (h_eq : RealMutationEquivalent B1 B2) :
     
     (variety_invariant B1 seed_C seed_G path i j = variety_invariant B2 seed_C seed_G path i j) → 
@@ -2599,10 +2573,9 @@ theorem variety_invariant_is_sufficient_classification
   
   -- Step 1: Call the subharmonic trajectory intersection property natively
   have h_asymptotic := mutation_attractor_recurrent_intersection B1 B1 C_seq G_seq1 G_seq2 seed_C seed_G path i j
-    ϕ ϕ1 ϕ2 ω κ ξ ξ1 ξ2 seed θ c PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow g h_substrate r R_ϕ hR_ϕ_nonneg 
-    h_phi_bound δ hδ_pos h_order_bound T hT h_amplitude_global B_noise h_B h_flow1 
-    h_arnold_tongue h_vorticity_equilibrium h_emergence_envelope h_omega_global h_spectral_contraction h_torus_wrap 
-    h_phi_init_global B h_B_nonneg h_primitive_noise_global h_noise_squeeze h_seed_corr_global 
+    ϕ ϕ1 ϕ2 ω κ ξ ξ1 ξ2 θ c PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow g h_substrate r R_ϕ hR_ϕ_nonneg 
+    h_phi_bound δ hδ_pos h_order_bound T hT B h_B h_flow1 
+    h_arnold_tongue h_vorticity_equilibrium h_emergence_envelope
     h_G1_convergence h_G2_convergence
 
   -- Step 2: Instantiate verified Phase 2 transport over the macro invariant channel
