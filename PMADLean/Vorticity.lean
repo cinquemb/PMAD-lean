@@ -1254,7 +1254,7 @@ omit [DecidableEq N] in
     weights κ and long-time phase overlap geometry) maps cleanly onto the discrete, 
     rational coordinates of the target cluster variety seed. -/
 theorem vorticity_tensor_limit_bridges_cluster_seed
-    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
+    (ϕ : Trajectory N) (κ : N → N → ℝ)
     (seed : ClusterSeed N) (i j : N) (t : ℝ)
     -- Type annotation fix: Explicitly declare the domain variable T_val as a real number (ℝ)
     (h_vorticity_limit : Tendsto (fun (_T_val : ℝ) => PhaseVorticityTensor κ ϕ t i j) 
