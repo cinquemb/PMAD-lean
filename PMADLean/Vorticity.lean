@@ -5,11 +5,10 @@ import PMADLean.Probability
 import PMADLean.Renormalization
 import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Algebra.BigOperators.Intervals
-import Mathlib.CategoryTheory.Category.Basic
 
 namespace PMADLean.Vorticity
 
-open BigOperators Filter Matrix Complex MeasureTheory Topology ComplexConjugate CategoryTheory
+open BigOperators Filter Matrix Complex MeasureTheory Topology ComplexConjugate
 open PMADLean.Axioms
 open PMADLean.Dynamics
 open PMADLean.Metrics
@@ -255,17 +254,6 @@ structure VarietyChart (N : Type*) where
   B : N → N → ℝ
   C : N → N → ℝ
   G : N → N → ℝ
-
-/-- The Real Cluster Exchange Graph Category:
-    Formalizes the entire infinite MUTATION tree STRUCTURE as a category.
-    Morphisms represent the directed paths connecting distinct variety charts. -/
-def ExchangeGraphCategory (N : Type*) [DecidableEq N] [Fintype N] (B0 : N → N → ℝ) : Type _ :=
-  VarietyChart N
-
-instance (N : Type*) [DecidableEq N] [Fintype N] (B0 : N → N → ℝ) : Category (ExchangeGraphCategory N B0) where
-  Hom X Y := List N
-  id X := []
-  comp path1 path2 := path1 ++ path2
 
 /-- Path-Independent Variety Equivalence Selector:
     Evaluates the terminal coordinate state of a variety chart after undergoing 
@@ -1267,7 +1255,7 @@ omit [DecidableEq N] in
     rational coordinates of the target cluster variety seed. -/
 theorem vorticity_tensor_limit_bridges_cluster_seed
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
-    (h_flow : IsPmadFlow ϕ ω κ ξ B) (seed : ClusterSeed N) (i j : N) (t : ℝ)
+    (seed : ClusterSeed N) (i j : N) (t : ℝ)
     -- Type annotation fix: Explicitly declare the domain variable T_val as a real number (ℝ)
     (h_vorticity_limit : Tendsto (fun (_T_val : ℝ) => PhaseVorticityTensor κ ϕ t i j) 
       atTop (𝓝 (seed.B_matrix i j : ℝ))) :
@@ -1291,9 +1279,7 @@ omit [DecidableEq N] in
     sign-coherently equivalent to the target cluster variety seed. -/
 theorem vorticity_to_cluster_sign_bridge
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
-    (h_flow : IsPmadFlow ϕ ω κ ξ B) (seed : ClusterSeed N) (i j : N) (t : ℝ)
-    (h_vorticity_equilibrium : PhaseVorticityTensor κ ϕ t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j t‖) / (Fintype.card N : ℝ)^2)
+    (h_flow : IsPmadFlow ϕ ω κ ξ B) (seed : ClusterSeed N) (i j : N)
     -- True Dynamical Premise: The time-averaged overlap functional converges as T_val → ∞
     (h_overlap_limit : Tendsto (fun (T_val : ℝ) => (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T_val‖) / (Fintype.card N : ℝ)^2) 
       atTop (𝓝 (seed.B_matrix i j : ℝ))) :
@@ -1490,7 +1476,6 @@ theorem pmad_uniform_positive_channel_implies_seed_positive
         (κ i k * AmplitudeWeight c i k) /
           (Fintype.card N : ℝ)^2)
     (ε : ℝ)
-    (hε : 0 < ε)
     (h_uniform :
       ∀ᶠ T : ℝ in atTop,
         ε ≤
@@ -1573,13 +1558,13 @@ theorem pmad_realizes_local_acyclic_channel
     pmad_uniform_positive_channel_implies_seed_positive ϕ ω κ ξ seed i k θ c
       h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_torus_wrap h_init_ik B
       h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik
-      h_noise_squeeze h_seed_corr_ik ε_ik hε_ik h_uniform_ik
+      h_noise_squeeze h_seed_corr_ik ε_ik h_uniform_ik
 
   have h_seed_lower_kj :=
     pmad_uniform_positive_channel_implies_seed_positive ϕ ω κ ξ seed k j θ c
       h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_torus_wrap h_init_kj B
       h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj
-      h_noise_squeeze h_seed_corr_kj ε_kj hε_kj h_uniform_kj
+      h_noise_squeeze h_seed_corr_kj ε_kj h_uniform_kj
 
   -- 3. Strict positivity of the discrete seed coefficients follows from the positive lower bounds.
   have h_ik_pos_real : 0 < (seed.B_matrix i k : ℝ) := lt_of_lt_of_le hε_ik h_seed_lower_ik
@@ -1658,10 +1643,6 @@ theorem pmad_realizes_mutation_scale_bound
     (h_uniform_kj : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop, 
       ε ≤ (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) k j T) / (Fintype.card N : ℝ)^2)
     
-    -- Structural Hypotheses: Require both target channels to be strictly positive
-    (h_ik_pos : seed.B_matrix i k > 0)
-    (h_top_kj_pos : seed.B_matrix k j > 0)
-    
     -- The Local Acyclicity Condition: The target seed belongs to an acyclic variety class
     (h_acyclic : IsLocallyAcyclicAt seed k)
     
@@ -1690,7 +1671,7 @@ theorem pmad_realizes_mutation_scale_bound
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
       ϕ ω κ ξ seed i k θ c h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_torus_wrap h_init_ik
       B h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik h_noise_squeeze 
-      h_seed_corr_ik ε hε hε_lower
+      h_seed_corr_ik ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- Derive strict positivity for the (k, j) network edge from the uniform channel bounds
@@ -1700,7 +1681,7 @@ theorem pmad_realizes_mutation_scale_bound
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
       ϕ ω κ ξ seed k j θ c h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_torus_wrap h_init_kj
       B h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj h_noise_squeeze 
-      h_seed_corr_kj ε hε hε_lower
+      h_seed_corr_kj ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- 3. Dismiss the double-negative contractive sector using strict positivity tokens
@@ -1827,7 +1808,7 @@ theorem pmad_realizes_mutation_increment
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
       ϕ ω κ ξ seed i k θ c h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_torus_wrap h_init_ik
       B h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik h_noise_squeeze 
-      h_seed_corr_ik ε hε hε_lower
+      h_seed_corr_ik ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- Derive strict positivity for the (k, j) network edge from the uniform channel bounds
@@ -1837,7 +1818,7 @@ theorem pmad_realizes_mutation_increment
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
       ϕ ω κ ξ seed k j θ c h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_torus_wrap h_init_kj
       B h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj h_noise_squeeze 
-      h_seed_corr_kj ε hε hε_lower
+      h_seed_corr_kj ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- 2. The positive incident arrows cannot involve the anchor itself.
@@ -2481,30 +2462,29 @@ theorem macro_current_invariant_under_mutation
     TRUE RESOLUTION: Eliminates finite step mismatches by matching h_diff_lim 
     directly against the AsymptoticGIntersection predicate natively. -/
 theorem mutation_attractor_recurrent_intersection
-    {N : Type*} [DecidableEq N] [Fintype N] (B1 B2 : N → N → ℝ)
-    (C_seq G_seq1 G_seq2 : ℝ → N → N → ℝ) (seed_C seed_G : N → N → ℝ) (path : List N) (i j : N)
-    (ϕ  ϕ1 ϕ2 : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ ξ1 ξ2 : ℝ → N → ℝ)
-    (θ : N → ℝ) (c : N → ℂ)
+    {N : Type*} [DecidableEq N] [Fintype N]
+    (G_seq1 G_seq2 : ℝ → N → N → ℝ) (seed_G : N → N → ℝ)
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
     (μ_spectrum : N → ℝ) (Ω : ℝ → ℝ) (Ω_min : ℝ) (hΩ_min : 0 ≤ Ω_min)
     (h_rg_flow : ∀ t, Ω_min ≤ Ω t) (g : Matrix N N ℝ)
     (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N) (r : ℝ) (R_ϕ : ℝ) (hR_ϕ_nonneg : 0 ≤ R_ϕ)
-    (h_phi_bound : ∀ t, |∑ i, ϕ1 t i| ≤ R_ϕ) (δ : ℝ) (hδ_pos : 0 < δ)
-    (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ1 t)^2) (T : ℝ) (hT : 0 < T)
+    (h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ) (δ : ℝ) (hδ_pos : 0 < δ)
+    (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ t)^2) (T : ℝ) (hT : 0 < T)
     (B : ℝ) (h_B : 0 ≤ B)
-    (h_flow1 : IsPmadFlow ϕ1 ω κ ξ1 B)
-    (h_arnold_tongue : IsInArnoldTongue ω κ ξ1 B ϕ1 h_flow1 T)
-    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ1 t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ1 ω κ ξ1 B h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
-    (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ1 t PhaseVorticityTensor i j) - 
-      (-(1 - ((2 * (∑ i, ϕ1 t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ1 t i (Ω t))^2) / ((PhaseOrderParameter ϕ1 t)^2))))| ≤ 
+    (h_flow1 : IsPmadFlow ϕ ω κ ξ B)
+    (h_arnold_tongue : IsInArnoldTongue ω κ ξ B ϕ h_flow1 T)
+    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j = 
+      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
+    (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) - 
+      (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤ 
       (Fintype.card N : ℝ)^2 * (4 * B * T))
     (h_G1_convergence : ∀ u v, Tendsto (fun T => G_seq1 T u v) atTop (𝓝 (seed_G u v)))
     (h_G2_convergence : ∀ u v, Tendsto (fun T => G_seq2 T u v) atTop (𝓝 (seed_G u v))) :
     AsymptoticGIntersection G_seq1 G_seq2 := by
   
   -- Step 1: Instantiate the microscale censorship limit envelope
-  have h_censorship := pmad_micro_censorship_alltime_noisy ω κ ξ1 B h_B ϕ1 h_flow1
+  have h_censorship := pmad_micro_censorship_alltime_noisy ω κ ξ B h_B ϕ h_flow1
     PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow g h_substrate r R_ϕ hR_ϕ_nonneg 
     h_phi_bound δ hδ_pos h_order_bound T hT h_arnold_tongue h_vorticity_equilibrium h_emergence_envelope
     
@@ -2546,22 +2526,22 @@ theorem mutation_attractor_recurrent_intersection
     B1 and B2 reside on the identical connected component of the variety MUTATION tree. -/
 theorem variety_invariant_is_sufficient_classification
     {N : Type*} [DecidableEq N] [Fintype N] (B1 B2 : N → N → ℝ)
-    (C_seq G_seq1 G_seq2 : ℝ → N → N → ℝ) (seed_C seed_G : N → N → ℝ) (path : List N) (i j : N)
-    (ϕ ϕ1 ϕ2 : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ ξ1 ξ2 : ℝ → N → ℝ)
-    (seed : ClusterSeed N) (θ : N → ℝ) (c : N → ℂ)
+    (G_seq1 G_seq2 : ℝ → N → N → ℝ) (seed_C seed_G : N → N → ℝ) (path : List N) (i j : N)
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
+    (seed : ClusterSeed N)
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
     (μ_spectrum : N → ℝ) (Ω : ℝ → ℝ) (Ω_min : ℝ) (hΩ_min : 0 ≤ Ω_min)
     (h_rg_flow : ∀ t, Ω_min ≤ Ω t) (g : Matrix N N ℝ)
     (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N) (r : ℝ) (R_ϕ : ℝ) (hR_ϕ_nonneg : 0 ≤ R_ϕ)
-    (h_phi_bound : ∀ t, |∑ i, ϕ1 t i| ≤ R_ϕ) (δ : ℝ) (hδ_pos : 0 < δ)
-    (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ1 t)^2) (T : ℝ) (hT : 0 < T)
+    (h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ) (δ : ℝ) (hδ_pos : 0 < δ)
+    (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ t)^2) (T : ℝ) (hT : 0 < T)
     (B : ℝ) (h_B : 0 ≤ B)
-    (h_flow1 : IsPmadFlow ϕ1 ω κ ξ1 B)
-    (h_arnold_tongue : IsInArnoldTongue ω κ ξ1 B ϕ1 h_flow1 T)
-    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ1 t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ1 ω κ ξ1 B h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
-    (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ1 t PhaseVorticityTensor i j) - 
-      (-(1 - ((2 * (∑ i, ϕ1 t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ1 t i (Ω t))^2) / ((PhaseOrderParameter ϕ1 t)^2))))| ≤ 
+    (h_flow1 : IsPmadFlow ϕ ω κ ξ B)
+    (h_arnold_tongue : IsInArnoldTongue ω κ ξ B ϕ h_flow1 T)
+    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j = 
+      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
+    (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) - 
+      (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤ 
       (Fintype.card N : ℝ)^2 * (4 * B * T))
     (h_G1_convergence : ∀ u v, Tendsto (fun T => G_seq1 T u v) atTop (𝓝 (seed_G u v)))
     (h_G2_convergence : ∀ u v, Tendsto (fun T => G_seq2 T u v) atTop (𝓝 (seed_G u v)))
@@ -2572,8 +2552,8 @@ theorem variety_invariant_is_sufficient_classification
   intro h_invariant_match
   
   -- Step 1: Call the subharmonic trajectory intersection property natively
-  have h_asymptotic := mutation_attractor_recurrent_intersection B1 B1 C_seq G_seq1 G_seq2 seed_C seed_G path i j
-    ϕ ϕ1 ϕ2 ω κ ξ ξ1 ξ2 θ c PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow g h_substrate r R_ϕ hR_ϕ_nonneg 
+  have h_asymptotic := mutation_attractor_recurrent_intersection G_seq1 G_seq2 seed_G
+    ϕ ω κ ξ PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow g h_substrate r R_ϕ hR_ϕ_nonneg 
     h_phi_bound δ hδ_pos h_order_bound T hT B h_B h_flow1 
     h_arnold_tongue h_vorticity_equilibrium h_emergence_envelope
     h_G1_convergence h_G2_convergence
