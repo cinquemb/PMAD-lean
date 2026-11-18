@@ -682,6 +682,147 @@ theorem uniform_kuramoto_detuning_to_dissipation
   rw [h_decomp]
   linarith
 
+/-- Resonant Kuramoto Detuning & Noise → Pairwise Dissipation Bridge (Axiom A4):
+Extends `uniform_kuramoto_detuning_to_dissipation` to non-uniform resonant networks
+`κ i j = (K / Fintype.card N) * R i j` governed by `UbiquitousResonance N R` (`0 < R i j ≤ 1`)
+with uniform lower bound `r_min > 0` (`∀ i j, r_min ≤ R i j`). -/
+theorem resonant_kuramoto_detuning_to_dissipation
+    [Nonempty N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
+    (R : N → N → ℝ) (hR : UbiquitousResonance N R)
+    (B K r_min Δω r₀ lambda_phys : ℝ)
+    (hK : 0 < K)
+    (hr_min_pos : 0 < r_min) (hr_min_le : ∀ i j, r_min ≤ R i j)
+    (hr₀_nonneg : 0 ≤ r₀) (hr₀_le_half_pi : r₀ ≤ Real.pi / 2)
+    (h_resonant_κ : ∀ i j, κ i j = (K / (Fintype.card N : ℝ)) * R i j)
+    (h_detuning : ∀ i j, |ω i - ω j| ≤ Δω)
+    (h_noise : ∀ t i, |ξ t i| ≤ B)
+    (ϕ : Trajectory N) (t : ℝ)
+    (h_cone : ∀ a b, |ϕ t a - ϕ t b| ≤ r₀)
+    (i j : N)
+    (h_margin : (Δω + 2 * B + 2 * K * (1 - r_min)) * |ϕ t i - ϕ t j| ≤
+      ((2 / Real.pi) * (K * r_min) * Real.cos r₀ + lambda_phys) * (ϕ t i - ϕ t j) ^ 2) :
+    let Δ := ϕ t i - ϕ t j
+    let Δ_dot := (ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
+                 (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j)
+    Δ * Δ_dot ≤ lambda_phys * Δ ^ 2 := by
+  dsimp only
+  set Δ : ℝ := ϕ t i - ϕ t j
+  set cardN : ℝ := (Fintype.card N : ℝ)
+  have h_card_pos : 0 < cardN := Nat.cast_pos.mpr Fintype.card_pos
+  -- 1. Decompose coupling into uniform baseline `K * r_min` + residual heterogeneity
+  have h_split_coup :
+      (∑ k, κ i k * Real.sin (ϕ t k - ϕ t i)) - (∑ k, κ j k * Real.sin (ϕ t k - ϕ t j)) =
+      ((∑ k, ((K * r_min) / cardN) * Real.sin (ϕ t k - ϕ t i)) -
+       (∑ k, ((K * r_min) / cardN) * Real.sin (ϕ t k - ϕ t j))) +
+      ((∑ k, (K / cardN) * (R i k - r_min) * Real.sin (ϕ t k - ϕ t i)) -
+       (∑ k, (K / cardN) * (R j k - r_min) * Real.sin (ϕ t k - ϕ t j))) := by
+    simp_rw [h_resonant_κ, ← Finset.sum_sub_distrib, ← Finset.sum_add_distrib]
+    apply Finset.sum_congr rfl
+    intro k _
+    ring
+  -- 2. Bound the residual heterogeneity term by `2 * K * (1 - r_min)`
+  have h_res_bound :
+      |(∑ k, (K / cardN) * (R i k - r_min) * Real.sin (ϕ t k - ϕ t i)) -
+       (∑ k, (K / cardN) * (R j k - r_min) * Real.sin (ϕ t k - ϕ t j))| ≤
+      2 * K * (1 - r_min) := by
+    have h_each : ∀ a : N,
+
+        |∑ k, (K / cardN) * (R a k - r_min) * Real.sin (ϕ t k - ϕ t a)| ≤ K * (1 - r_min) := by
+      intro a
+      calc
+
+        |∑ k, (K / cardN) * (R a k - r_min) * Real.sin (ϕ t k - ϕ t a)|
+            ≤ ∑ k, |(K / cardN) * (R a k - r_min) * Real.sin (ϕ t k - ϕ t a)| :=
+              Finset.abs_sum_le_sum_abs _ _
+        _ ≤ ∑ k : N, (K / cardN) * (1 - r_min) := by
+              apply Finset.sum_le_sum
+              intro k _
+              have h_r_nonneg : 0 ≤ R a k - r_min := sub_nonneg.mpr (hr_min_le a k)
+              have h_r_le : R a k - r_min ≤ 1 - r_min := by linarith [(hR a k).2]
+              have h_sin_le : |Real.sin (ϕ t k - ϕ t a)| ≤ 1 := Real.abs_sin_le_one _
+              have h_kc_nonneg : 0 ≤ K / cardN := div_nonneg (le_of_lt hK) (le_of_lt h_card_pos)
+              rw [abs_mul, abs_mul, abs_of_nonneg h_kc_nonneg, abs_of_nonneg h_r_nonneg]
+              calc
+                (K / cardN) * (R a k - r_min) * |Real.sin (ϕ t k - ϕ t a)|
+                    ≤ (K / cardN) * (R a k - r_min) * 1 :=
+                      mul_le_mul_of_nonneg_left h_sin_le (mul_nonneg h_kc_nonneg h_r_nonneg)
+                _ = (K / cardN) * (R a k - r_min) := mul_one _
+                _ ≤ (K / cardN) * (1 - r_min) :=
+                      mul_le_mul_of_nonneg_left h_r_le h_kc_nonneg
+        _ = K * (1 - r_min) := by
+              simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, cardN]
+              field_simp [ne_of_gt h_card_pos]
+    calc
+      |(∑ k, (K / cardN) * (R i k - r_min) * Real.sin (ϕ t k - ϕ t i)) -
+       (∑ k, (K / cardN) * (R j k - r_min) * Real.sin (ϕ t k - ϕ t j))|
+          ≤ |∑ k, (K / cardN) * (R i k - r_min) * Real.sin (ϕ t k - ϕ t i)| +
+
+            |∑ k, (K / cardN) * (R j k - r_min) * Real.sin (ϕ t k - ϕ t j)| := abs_sub _ _
+      _ ≤ K * (1 - r_min) + K * (1 - r_min) := add_le_add (h_each i) (h_each j)
+      _ = 2 * K * (1 - r_min) := by ring
+  -- 3. Bound total perturbation `(ω i - ω j) + (ξ t i - ξ t j) + residual_coupling`
+  let res_coup :=
+    (∑ k, (K / cardN) * (R i k - r_min) * Real.sin (ϕ t k - ϕ t i)) -
+    (∑ k, (K / cardN) * (R j k - r_min) * Real.sin (ϕ t k - ϕ t j))
+  have h_tot_pert_abs : |(ω i - ω j) + (ξ t i - ξ t j) + res_coup| ≤
+      Δω + 2 * B + 2 * K * (1 - r_min) := by
+    calc
+
+      |(ω i - ω j) + (ξ t i - ξ t j) + res_coup|
+          ≤ |(ω i - ω j) + (ξ t i - ξ t j)| + |res_coup| := abs_add_le _ _
+      _ ≤ (|ω i - ω j| + |ξ t i - ξ t j|) + |res_coup| := by
+            gcongr; exact abs_add_le _ _
+      _ ≤ (|ω i - ω j| + (|ξ t i| + |ξ t j|)) + |res_coup| := by
+            gcongr; exact abs_sub _ _
+      _ ≤ (Δω + (B + B)) + 2 * K * (1 - r_min) :=
+            add_le_add (add_le_add (h_detuning i j) (add_le_add (h_noise t i) (h_noise t j))) h_res_bound
+      _ = Δω + 2 * B + 2 * K * (1 - r_min) := by ring
+  have h_tot_pert_mul : Δ * ((ω i - ω j) + (ξ t i - ξ t j) + res_coup) ≤
+      (Δω + 2 * B + 2 * K * (1 - r_min)) * |Δ| := by
+    calc
+      Δ * ((ω i - ω j) + (ξ t i - ξ t j) + res_coup)
+          ≤ |Δ * ((ω i - ω j) + (ξ t i - ξ t j) + res_coup)| := le_abs_self _
+      _ = |Δ| * |(ω i - ω j) + (ξ t i - ξ t j) + res_coup| := abs_mul _ _
+      _ ≤ |Δ| * (Δω + 2 * B + 2 * K * (1 - r_min)) :=
+            mul_le_mul_of_nonneg_left h_tot_pert_abs (abs_nonneg _)
+      _ = (Δω + 2 * B + 2 * K * (1 - r_min)) * |Δ| := mul_comm _ _
+  -- 4. Reuse `uniform_kuramoto_detuning_to_dissipation` on the symmetric core with `ω' = 0, ξ' = 0`!
+  have h_core := uniform_kuramoto_detuning_to_dissipation
+    (fun _ => 0) (fun _ _ => (K * r_min) / cardN) (fun _ _ => 0)
+    0 (K * r_min) 0 r₀ (-((2 / Real.pi) * (K * r_min) * Real.cos r₀))
+    (mul_pos hK hr_min_pos) hr₀_nonneg hr₀_le_half_pi
+    (fun _ _ => rfl) (fun _ _ => by simp) (fun _ _ => by simp)
+    ϕ t h_cone i j
+    (by simp)
+  dsimp only at h_core
+  simp only [zero_sub, add_zero, zero_add] at h_core
+  -- 5. Combine `h_tot_pert_mul`, `h_core`, and `h_margin`
+  have h_decomp :
+      Δ * ((ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
+           (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j)) =
+      Δ * ((ω i - ω j) + (ξ t i - ξ t j) + res_coup) +
+      Δ * ((∑ k, ((K * r_min) / cardN) * Real.sin (ϕ t k - ϕ t i)) -
+           (∑ k, ((K * r_min) / cardN) * Real.sin (ϕ t k - ϕ t j))) := by
+    have h_rearr :
+        (ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
+        (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j) =
+        ((ω i - ω j) + (ξ t i - ξ t j) + res_coup) +
+        ((∑ k, ((K * r_min) / cardN) * Real.sin (ϕ t k - ϕ t i)) -
+         (∑ k, ((K * r_min) / cardN) * Real.sin (ϕ t k - ϕ t j))) := by
+      have h_sub :
+          (ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
+          (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j) =
+          (ω i - ω j) + (ξ t i - ξ t j) +
+          ((∑ k, κ i k * Real.sin (ϕ t k - ϕ t i)) - (∑ k, κ j k * Real.sin (ϕ t k - ϕ t j))) := by ring
+      rw [h_sub, h_split_coup]
+      dsimp [res_coup]
+      ring
+    rw [h_rearr]
+    ring
+  rw [h_decomp]
+  linarith
+
 
 omit [DecidableEq N] in
 /-- General Tubular Gauge Attractor Engine:
@@ -804,43 +945,88 @@ theorem uniform_kuramoto_converges_to_attractor
           ϕ' s (h_cone s) a b (h_margin s a b))
         t ht lambda_bound h_ge_phys h_le_zero i j)
   exact ⟨A, fun lambda_bound h_ge h_le => hA lambda_bound ⟨h_ge, h_le⟩⟩
+  
+/-- Master Hypothesis-Free Resonant Kuramoto Attractor Theorem (Axiom A4):
+Proves synchronization attractor convergence directly for non-uniform resonant networks
+`κ i j = (K / Fintype.card N) * R i j` governed by `UbiquitousResonance N R` (`0 < R i j ≤ 1`)
+with uniform lower bound `r_min > 0` (`∀ i j, r_min ≤ R i j`), completely discharging
+`h_spectral_contraction` via Jordan's inequality and Grönwall contraction. -/
+theorem resonant_kuramoto_converges_to_attractor
+    [Nonempty N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
+    (R : N → N → ℝ) (hR : UbiquitousResonance N R)
+    (B K r_min Δω r₀ lambda_phys : ℝ)
+    (hK : 0 < K)
+    (hr_min_pos : 0 < r_min) (hr_min_le : ∀ i j, r_min ≤ R i j)
+    (hr₀_nonneg : 0 ≤ r₀) (hr₀_le_half_pi : r₀ ≤ Real.pi / 2)
+    (h_lambda_phys : lambda_phys ≤ 0)
+    (h_resonant_κ : ∀ i j, κ i j = (K / (Fintype.card N : ℝ)) * R i j)
+    (h_detuning : ∀ i j, |ω i - ω j| ≤ Δω)
+    (h_noise : ∀ t i, |ξ t i| ≤ B) :
+    ∃ (A : Set (PhaseState N)), ∀ lambda_bound, lambda_phys ≤ lambda_bound → lambda_bound ≤ 0 →
+      AttractorSet N
+        (fun ϕ => IsPmadFlow ϕ ω κ ξ B ∧
+          (∀ i j, |ϕ 0 i - ϕ 0 j| < 1) ∧
+          (∀ t a b, |ϕ t a - ϕ t b| ≤ r₀) ∧
+          (∀ t i j, (Δω + 2 * B + 2 * K * (1 - r_min)) * |ϕ t i - ϕ t j| ≤
+            ((2 / Real.pi) * (K * r_min) * Real.cos r₀ + lambda_phys) * (ϕ t i - ϕ t j) ^ 2))
+        A lambda_bound := by
+  have ⟨A, hA⟩ := tubular_gauge_attractor_of_contraction
+    (fun ϕ => IsPmadFlow ϕ ω κ ξ B ∧
+      (∀ i j, |ϕ 0 i - ϕ 0 j| < 1) ∧
+      (∀ t a b, |ϕ t a - ϕ t b| ≤ r₀) ∧
+      (∀ t i j, (Δω + 2 * B + 2 * K * (1 - r_min)) * |ϕ t i - ϕ t j| ≤
+        ((2 / Real.pi) * (K * r_min) * Real.cos r₀ + lambda_phys) * (ϕ t i - ϕ t j) ^ 2))
+    (fun lambda_bound => lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0)
+    (fun ϕ' ⟨h_flow, h_init_basin, h_cone, h_margin⟩ t ht lambda_bound ⟨h_ge_phys, h_le_zero⟩ i j =>
+      kuramoto_detuning_spectral_contraction ω κ ξ B lambda_phys h_lambda_phys
+        ϕ' h_flow h_init_basin
+        (fun s a b => resonant_kuramoto_detuning_to_dissipation ω κ ξ R hR B K r_min Δω r₀ lambda_phys
+          hK hr_min_pos hr_min_le hr₀_nonneg hr₀_le_half_pi h_resonant_κ h_detuning h_noise
+          ϕ' s (h_cone s) a b (h_margin s a b))
+        t ht lambda_bound h_ge_phys h_le_zero i j)
+  exact ⟨A, fun lambda_bound h_ge h_le => hA lambda_bound ⟨h_ge, h_le⟩⟩
 
-/-- Relation Theorem: Strong-Coupling / Adiabatic Limit Bridge.
-Derives the `h_spectral_contraction` hypothesis from uniform Kuramoto coupling
-in the strong-coupling / adiabatic limit (`K` dominating any target decay rate
-`lambda_bound ≤ 0`) and invokes `pmad_flow_converges_to_attractor` directly. -/
+
+/-- Relation Theorem: Resonant Strong-Coupling / Adiabatic Limit Bridge (Axiom A4).
+Derives `h_spectral_contraction` from weighted resonant Kuramoto coupling
+`κ i j = (K / Fintype.card N) * R i j` (`UbiquitousResonance N R`) in the strong-coupling
+limit and invokes `pmad_flow_converges_to_attractor` directly. -/
 theorem kuramoto_strong_coupling_limit_to_pmad_attractor
     [Nonempty N]
-    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B Δω r₀ : ℝ)
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
+    (R : N → N → ℝ) (hR : UbiquitousResonance N R)
+    (B r_min Δω r₀ : ℝ)
+    (hr_min_pos : 0 < r_min) (hr_min_le : ∀ i j, r_min ≤ R i j)
     (hr₀_nonneg : 0 ≤ r₀) (hr₀_le_half_pi : r₀ ≤ Real.pi / 2)
     (h_detuning : ∀ i j, |ω i - ω j| ≤ Δω)
     (h_noise : ∀ t i, |ξ t i| ≤ B)
     -- Basin invariance of admissible physical flows inside the synchronization cone
     (h_basin_invariance : ∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
       (∀ i j, |ϕ 0 i - ϕ 0 j| < 1) ∧ (∀ t a b, |ϕ t a - ϕ t b| ≤ r₀))
-    -- Strong-coupling / adiabatic regime: for any target decay rate `lambda_bound ≤ 0`,
-    -- the effective uniform coupling `K` is strong enough to enforce dissipation at rate `lambda_bound`
+    -- Strong-coupling / adiabatic regime over the resonant network `R`:
     (h_strong_coupling : ∀ lambda_bound ≤ (0 : ℝ), ∃ K > 0,
-      (∀ i j, κ i j = K / (Fintype.card N : ℝ)) ∧
+      (∀ i j, κ i j = (K / (Fintype.card N : ℝ)) * R i j) ∧
       (∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
-        ∀ t i j, (Δω + 2 * B) * |ϕ t i - ϕ t j| ≤
-          ((2 / Real.pi) * K * Real.cos r₀ + lambda_bound) * (ϕ t i - ϕ t j) ^ 2)) :
+        ∀ t i j, (Δω + 2 * B + 2 * K * (1 - r_min)) * |ϕ t i - ϕ t j| ≤
+          ((2 / Real.pi) * (K * r_min) * Real.cos r₀ + lambda_bound) * (ϕ t i - ϕ t j) ^ 2)) :
     ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ),
       AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound := by
-  -- 1. Derive `h_spectral_contraction` from Jordan's inequality + Grönwall contraction
+  -- 1. Derive `h_spectral_contraction` from Axiom A4 resonance + Jordan's inequality + Grönwall contraction
   have h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
     intro ϕ' h_flow t ht lambda_bound h_le_zero i j
     obtain ⟨h_init, h_cone⟩ := h_basin_invariance ϕ' h_flow
-    obtain ⟨K, hK, h_unif, h_marg⟩ := h_strong_coupling lambda_bound h_le_zero
+    obtain ⟨K, hK, h_res, h_marg⟩ := h_strong_coupling lambda_bound h_le_zero
     have h_diss := fun s a b =>
-      uniform_kuramoto_detuning_to_dissipation ω κ ξ B K Δω r₀ lambda_bound
-        hK hr₀_nonneg hr₀_le_half_pi h_unif h_detuning h_noise
+      resonant_kuramoto_detuning_to_dissipation ω κ ξ R hR B K r_min Δω r₀ lambda_bound
+        hK hr_min_pos hr_min_le hr₀_nonneg hr₀_le_half_pi h_res h_detuning h_noise
         ϕ' s (h_cone s) a b (h_marg ϕ' h_flow s a b)
     exact kuramoto_detuning_spectral_contraction ω κ ξ B lambda_bound h_le_zero
       ϕ' h_flow h_init h_diss t ht lambda_bound le_rfl h_le_zero i j
   -- 2. Invoke `pmad_flow_converges_to_attractor` directly
   exact pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
+
 
 omit [DecidableEq N] in
 /-- Invariance under global phase shift.
