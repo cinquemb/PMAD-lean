@@ -80,8 +80,7 @@ theorem physlib_quantum_probability_general_bridge
 
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+   
     (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t)
@@ -93,7 +92,7 @@ theorem physlib_quantum_probability_general_bridge
   rw [←h_physlib_match]
   -- CLEANED: Passing raw hypotheses directly without parameterization
   exact born_rule_noise_degradation_bound_derive_ftc_evolution ϕ ω κ ξ B h_B h_flow i j θ c 
-    h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_torus_wrap h_primitive_noise h_init h_diff_integrable T hT h_integrable
+    h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_primitive_noise h_init h_diff_integrable T hT h_integrable
 
 
 omit [DecidableEq N] in
@@ -142,9 +141,7 @@ theorem physlib_off_diagonal_decoherence_bound
     (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
     (h_omega : ω i = ω j)
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))  
     (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t)
@@ -169,9 +166,9 @@ theorem physlib_off_diagonal_decoherence_bound
       exact h_primitive_noise t
 
   -- 3. Pass the specialized non-diagonal constraint into the core calculus
-  -- FIXED: Forwarded h_spectral_contraction and h_torus_wrap into the FTC degradation block
+  -- FIXED: Forwarded h_spectral_contraction into the FTC degradation block
   exact born_rule_noise_degradation_bound_derive_ftc_evolution ϕ ω κ ξ B h_B h_flow i j θ c 
-    h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_torus_wrap (fun t => h_non_trivial_noise t hij) 
+    h_amplitude_i h_amplitude_j h_omega h_spectral_contraction (fun t => h_non_trivial_noise t hij) 
     h_init h_diff_integrable T hT h_integrable
 
 
@@ -240,9 +237,7 @@ theorem pmad_flow_tracks_bundled_cptp_output
     (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
     (h_omega : ω i = ω j)
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))  
     (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t)
@@ -268,9 +263,9 @@ theorem pmad_flow_tracks_bundled_cptp_output
   
   -- 2. Isolate and bind the first component (Trajectory-to-Pure-State tracking drift)
   have h_trajectory_drift : |(MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T) - (ψ i * star (ψ j)).re| ≤ 4 * B * T := by
-    -- FIXED: Forwarded h_spectral_contraction and h_torus_wrap into the off-diagonal decoherence block
+    -- FIXED: Forwarded h_spectral_contraction into the off-diagonal decoherence block
     exact physlib_off_diagonal_decoherence_bound ϕ ω κ ξ B h_B h_flow i j hij θ c
-      h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_torus_wrap h_primitive_noise h_init h_diff_integrable T hT h_integrable ψ h_physlib_match
+      h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_primitive_noise h_init h_diff_integrable T hT h_integrable ψ h_physlib_match
 
   -- 3. Isolate and evaluate the second component (Pure-State-to-Kraus-Channel relaxation damping)
   have h_channel_relaxation : |(ψ i * star (ψ j)).re - ((bundledPmadPhaseDampingChannel γ T h_bound h_pos ρ).m 0 1).re| ≤ 4 * B * T := by

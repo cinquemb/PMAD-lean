@@ -219,13 +219,10 @@ theorem pmad_flow_converges_to_attractor
     
     -- hypothesis: Spectral Contraction Bridge for physical trajectories
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-      
-    -- hypothesis: Torus Manifold Structural Wrapping for non-admissible trajectory perturbations
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
     
-    ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ), AttractorSet N A lambda_bound := by
+    ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ), 
+      AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound := by
   
   -- Step 1: Define the Gauge Orbit Attractor (Synchronization Manifold)
   let A_gauge_orbit : Set (PhaseState N) := { x | ∀ i j, x i = x j }
@@ -233,7 +230,7 @@ theorem pmad_flow_converges_to_attractor
   
   intro lambda_bound h_lambda
   unfold AttractorSet
-  intro h_dyn_stable ϕ'
+  intro h_dyn_stable ϕ' h_is_flow
   
   -- Step 2: Define a clean, dynamic open metric tube around the synchronization manifold
   let 𝓤_tubular : ℝ → Set (PhaseState N) := fun α => 
@@ -290,13 +287,10 @@ theorem pmad_flow_converges_to_attractor
     intro α₁ α₂ h_le x hx i j
     exact lt_of_lt_of_le (hx i j) h_le
     
-  · -- Property D: Trajectory Trapping derived honestly through the Conditional Split
+  · -- Property D: Trajectory Trapping for physical trajectories
     intro t ht; dsimp [𝓤_tubular]; intro i j
-    by_cases h_flow' : IsPmadFlow ϕ' ω κ ξ B
-    · -- Case D1: Physical flow containment correctly unified with the gauge manifold bounds
-      exact h_spectral_contraction ϕ' h_flow' t ht lambda_bound h_lambda i j
-    · -- Case D2: non-admissible trajectory perturbations handled natively by the Torus Boundary Wrap
-      exact h_torus_wrap ϕ' h_flow' t ht lambda_bound h_lambda i j
+    exact h_spectral_contraction ϕ' h_is_flow t ht lambda_bound h_lambda i j
+
 
 omit [DecidableEq N] in
 /-- Invariance under global phase shift.
@@ -505,29 +499,21 @@ omit [DecidableEq N] in
     contraction bounds to guarantee stability and convergence. -/  
 theorem cluster_flow_converges_to_attractor
     (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ) (seed : ClusterSeed N)
-        -- Hypothesis: The system's Arnold tongues are generated directly by Laurent shielding invariants
+    -- Hypothesis: Physical PMAD flows are trapped inside the Laurent shielding envelope
+    (h_envelope_trapping : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → IsLaurentShielded ϕ' seed)
+    -- Hypothesis: The system's Arnold tongues are generated directly by Laurent shielding invariants
     (h_laurent_bounds : ∀ (ϕ' : Trajectory N), IsClassOneStable ϕ' seed ω κ ξ B →
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-          -- Hypothesis: Unshielded chaotic noise channels are structurally driven to collapse by boundary tracking
-    (h_unshielded_collapse : ∀ (ϕ' : Trajectory N), ¬ IsClassOneStable ϕ' seed ω κ ξ B →
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
-    ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ), AttractorSet N A lambda_bound := by
-  -- Step 1: Restructure the conditional split hypotheses to strip away the cluster compound predicate
+    ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ), 
+      AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound := by
+  -- Step 1: Combine flow admissibility and envelope trapping to get Class I stability
   have h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
     ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
     intro ϕ' h_flow t ht lambda_bound h_lambda i j
-    by_cases h_shield : IsLaurentShielded ϕ' seed
-    · have h_class1 : IsClassOneStable ϕ' seed ω κ ξ B := ⟨h_flow, h_shield⟩
-      exact h_laurent_bounds ϕ' h_class1 t ht lambda_bound h_lambda i j
-    · have h_not_class1 : ¬ IsClassOneStable ϕ' seed ω κ ξ B := fun h_contra => h_shield h_contra.2
-      exact h_unshielded_collapse ϕ' h_not_class1 t ht lambda_bound h_lambda i j
+    have h_class1 : IsClassOneStable ϕ' seed ω κ ξ B := ⟨h_flow, h_envelope_trapping ϕ' h_flow⟩
+    exact h_laurent_bounds ϕ' h_class1 t ht lambda_bound h_lambda i j
+  -- Step 2: Invoke the main PMAD convergence engine cleanly
+  exact pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
 
-  have h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
-    ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
-    intro ϕ' h_not_flow t ht lambda_bound h_lambda i j
-    have h_not_class1 : ¬ IsClassOneStable ϕ' seed ω κ ξ B := fun h_contra => h_not_flow h_contra.1
-    exact h_unshielded_collapse ϕ' h_not_class1 t ht lambda_bound h_lambda i j
-  -- Step 2: Invoke the main PMAD convergence engine cleanly using the compiled proofs
-  exact pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction h_torus_wrap
 
 end PMADLean.Dynamics

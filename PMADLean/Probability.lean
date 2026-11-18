@@ -420,11 +420,7 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     -- hypothesis: Spectral Contraction Bridge for physical trajectories
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-      
-    -- hypothesis: Torus Manifold Structural Wrapping for non-admissible trajectory perturbations 
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
-      
+
     (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
@@ -434,8 +430,8 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
   intro h_integrable
   
-    -- Step 1: Instantiate the trapping envelope from the dynamics core
-  have h_manifold_trapped := pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction h_torus_wrap
+  -- Step 1: Instantiate the trapping envelope from the dynamics core
+  have h_manifold_trapped := pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
   
   -- Step 2: Restrict the coupling cancellation hypothesis to the forward dissipative timeline (t > 0)
   have h_coupling_cancel : ∀ t > 0, (∑ k, κ i k * Real.sin ((ϕ t k) - (ϕ t i))) = (∑ k, κ j k * Real.sin ((ϕ t k) - (ϕ t j))) := by
@@ -478,8 +474,12 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
         have h_att_inst := hA_core lambda_bound h_lambda_le_zero
         unfold AttractorSet at h_att_inst
         
+        -- have h_stable_token : IsDynamicallyStable lambda_bound := h_lambda_le_zero
+        -- rcases h_att_inst h_stable_token ϕ with ⟨App, h_open_App, h_inter_App, h_mono_App, h_trap_App⟩
+        
         have h_stable_token : IsDynamicallyStable lambda_bound := h_lambda_le_zero
-        rcases h_att_inst h_stable_token ϕ with ⟨App, h_open_App, h_inter_App, h_mono_App, h_trap_App⟩
+        rcases h_att_inst h_stable_token ϕ h_flow with ⟨App, h_open_App, h_inter_App, h_mono_App, h_trap_App⟩
+
         
         have h_trapped_t := h_trap_App t ht_pos
         rw [h_mul_cancel] at h_trapped_t

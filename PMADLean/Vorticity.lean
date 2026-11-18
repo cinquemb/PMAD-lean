@@ -696,8 +696,6 @@ theorem complex_norm_error_bound_single_slot
     (h_omega : ω i = ω j)
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
     (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
@@ -710,7 +708,7 @@ theorem complex_norm_error_bound_single_slot
 
   -- Step 1: Call `born_rule_noise_degradation_bound_derive_ftc_evolution` to extract the real pointwise error boundary
   have h_real_physics := born_rule_noise_degradation_bound_derive_ftc_evolution
-    ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_torus_wrap
+    ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega h_spectral_contraction
     h_primitive_noise h_init h_diff_integrable T hT h_integrable
 
   -- Step 2: Unfold the definition of MacroscopicBornProbability to align syntax layouts
@@ -743,9 +741,7 @@ theorem complex_norm_error_bound_matrix_grid
     (h_amplitude_j : ∀ j, c j = exp (I * (θ j : ℂ)))
     (h_omega : ∀ i j, ω i = ω j)
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))    
     (h_primitive_noise : ∀ t i j, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ∀ i j, ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t i j, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
@@ -763,7 +759,7 @@ theorem complex_norm_error_bound_matrix_grid
     -- The absolute value of a norm is just the norm itself since norms are non-negative
     rw [abs_of_nonneg (norm_nonneg _)]
     exact complex_norm_error_bound_single_slot ϕ ω κ ξ B h_B h_flow i j θ c 
-      (h_amplitude_i i) (h_amplitude_j j) (h_omega i j) h_spectral_contraction h_torus_wrap
+      (h_amplitude_i i) (h_amplitude_j j) (h_omega i j) h_spectral_contraction
       (h_primitive_noise · i j) (h_init i j) (h_diff_integrable · i j) T hT (h_integrable i j) (h_imag_locked i j)
 
   -- Step 2: Feed the pointwise bounds into LEMMA 1 to evaluate the entire matrix double sum
@@ -792,9 +788,6 @@ theorem derive_order_parameter_handshake_from_dynamics
     -- FIXED: Substituted (fun _ _ => 0) for ξ and 0 for B below
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ (fun _ _ => 0) 0 → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    -- FIXED: Substituted (fun _ _ => 0) for ξ and 0 for B below
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ (fun _ _ => 0) 0 → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
     (h_primitive_noise : ∀ (_t' : ℝ) (_i _j : N), |(0 : ℝ) - 0| ≤ 2 * 0)
     (h_init : ∀ i j : N, ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ (t' : ℝ) (_i _j : N), IntervalIntegrable (fun _ => (0:ℝ) - 0) volume 0 t')
@@ -814,7 +807,7 @@ theorem derive_order_parameter_handshake_from_dynamics
   -- Proves that the total network variance collapses to absolute zero in the zero-noise limit.
   have h_global_fluctuation_vanishing : |∑ i : N, ∑ j : N, ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ 0 := by
     have h_raw := complex_norm_error_bound_matrix_grid
-      ϕ ω κ (fun _ _ => 0) 0 (le_refl 0) h_flow θ c h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_torus_wrap
+      ϕ ω κ (fun _ _ => 0) 0 (le_refl 0) h_flow θ c h_amplitude_i h_amplitude_j h_omega h_spectral_contraction
       h_primitive_noise h_init h_diff_integrable T hT h_integrable h_imag_locked
     linarith
 
@@ -912,9 +905,6 @@ theorem pmad_micro_censorship_alltime
     -- FIXED: Substituted (fun _ _ => 0) for ξ and 0 for B below
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ (fun _ _ => 0) 0 → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    -- FIXED: Substituted (fun _ _ => 0) for ξ and 0 for B below
-    (h_torus_wrap : ∀ (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ (fun _ _ => 0) 0 → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
     (h_primitive_noise : ∀ (_t' : ℝ) (_i _j : N), |(0 : ℝ) - 0| ≤ 2 * 0)
     (h_init : ∀ i j : N, ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ (t' : ℝ) (_i _j : N), IntervalIntegrable (fun _ => (0:ℝ) - 0) volume 0 t')
@@ -966,7 +956,7 @@ theorem pmad_micro_censorship_alltime
     -- Compute the handshake identity at time t' natively
     have h_handshake := derive_order_parameter_handshake_from_dynamics
       ω κ ϕ PhaseVorticityTensor θ c t' T hT (Ω t') r h_flow 
-      h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_torus_wrap h_primitive_noise h_init 
+      h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_primitive_noise h_init 
       h_diff_integrable h_integrable h_locked_diff (fun i j => h_snapshot_lock i j t') 
       h_imag_locked (h_static_trace_handshake t') (h_vorticity_equilibrium t')
 
@@ -1309,10 +1299,7 @@ theorem derived_vorticity_to_cluster_bridge
     (h_omega : ω i = ω j)
     -- FIXED: Quantified over an arbitrary noise level B_bound to allow substitution
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    -- FIXED: Quantified over an arbitrary noise level B_bound to allow substitution
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     
     -- Explicitly type all horizon parameters in the header
@@ -1348,7 +1335,7 @@ theorem derived_vorticity_to_cluster_bridge
     
     have h_ftc := born_rule_noise_degradation_bound_derive_ftc_evolution
       ϕ ω κ ξ (B T) (h_B_nonneg T) (h_flow T) i j θ c 
-      h_amplitude_i h_amplitude_j h_omega (h_spectral_contraction (B T)) (h_torus_wrap (B T)) (h_primitive_noise T) h_init (h_diff_integrable T) T hT (h_integrable T)
+      h_amplitude_i h_amplitude_j h_omega (h_spectral_contraction (B T)) (h_primitive_noise T) h_init (h_diff_integrable T) T hT (h_integrable T)
       
     have h_abs_div : |κ i j / (Fintype.card N : ℝ)^2| = |κ i j| / (Fintype.card N : ℝ)^2 := by
       rw [abs_div]
@@ -1404,9 +1391,6 @@ theorem derived_vorticity_to_cluster_sign_bridge
     -- FIXED: Quantified over an arbitrary noise level B_bound to allow correct substitution downstream
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    -- FIXED: Quantified over an arbitrary noise level B_bound to allow correct substitution downstream
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
     (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
@@ -1427,7 +1411,7 @@ theorem derived_vorticity_to_cluster_sign_bridge
   have h_limit : Tendsto (fun (T : ℝ) => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i j T) / (Fintype.card N : ℝ)^2) 
     atTop (𝓝 (seed.B_matrix i j : ℝ)) := by
     exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed i j θ c h_amplitude_i h_amplitude_j
-      h_omega h_spectral_contraction h_torus_wrap h_init B h_B_nonneg h_flow h_primitive_noise h_diff_integrable h_integrable h_noise_squeeze h_seed_correspondence
+      h_omega h_spectral_contraction h_init B h_B_nonneg h_flow h_primitive_noise h_diff_integrable h_integrable h_noise_squeeze h_seed_correspondence
 
   -- 2. Compose the extracted limit with topological neighborhood sign-preservation filters
   constructor
@@ -1448,9 +1432,7 @@ theorem pmad_uniform_positive_channel_implies_seed_positive
     (h_amplitude_k : c k = exp (I * (θ k : ℂ)))
     (h_omega_ik : ω i = ω k)
     (h_spectral_contraction_ik : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap_ik : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
     (h_init_ik : ϕ 0 i - ϕ 0 k = θ i - θ k)
     (B : ℝ → ℝ)
     (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
@@ -1492,7 +1474,6 @@ theorem pmad_uniform_positive_channel_implies_seed_positive
       h_amplitude_k
       h_omega_ik
       h_spectral_contraction_ik
-      h_torus_wrap_ik
       h_init_ik
       B
       h_B_nonneg
@@ -1516,9 +1497,7 @@ theorem pmad_realizes_local_acyclic_channel
     (h_omega_ik : ω i = ω k)
     (h_omega_kj : ω k = ω j)
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))  
     -- 3. Initial Phase Offset Coordination across both sub-channels
     (h_init_ik : ϕ 0 i - ϕ 0 k = θ i - θ k)
     (h_init_kj : ϕ 0 k - ϕ 0 j = θ k - θ j)
@@ -1556,13 +1535,13 @@ theorem pmad_realizes_local_acyclic_channel
   -- 2. Use the PMAD asymptotic bridge to transfer each uniform physical lower bound to the corresponding discrete seed coefficient.
   have h_seed_lower_ik :=
     pmad_uniform_positive_channel_implies_seed_positive ϕ ω κ ξ seed i k θ c
-      h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_torus_wrap h_init_ik B
+      h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_init_ik B
       h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik
       h_noise_squeeze h_seed_corr_ik ε_ik h_uniform_ik
 
   have h_seed_lower_kj :=
     pmad_uniform_positive_channel_implies_seed_positive ϕ ω κ ξ seed k j θ c
-      h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_torus_wrap h_init_kj B
+      h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_init_kj B
       h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj
       h_noise_squeeze h_seed_corr_kj ε_kj h_uniform_kj
 
@@ -1576,13 +1555,13 @@ theorem pmad_realizes_local_acyclic_channel
   -- 4. Reuse the sign-transport bridges, now with positivity established dynamically rather than assumed.
   have h_bridge_ik :=
     derived_vorticity_to_cluster_sign_bridge ϕ ω κ ξ seed i k θ c
-      h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_torus_wrap h_init_ik B
+      h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_init_ik B
       h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik
       h_noise_squeeze h_seed_corr_ik
 
   have h_bridge_kj :=
     derived_vorticity_to_cluster_sign_bridge ϕ ω κ ξ seed k j θ c
-      h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_torus_wrap h_init_kj B
+      h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_init_kj B
       h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj
       h_noise_squeeze h_seed_corr_kj
 
@@ -1614,9 +1593,7 @@ theorem pmad_realizes_mutation_scale_bound
     (h_omega_ik : ω i = ω k)
     (h_omega_kj : ω k = ω j)
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
     
     -- 3. Initial Phase Offset Coordination across both sub-channels
     (h_init_ik : ϕ 0 i - ϕ 0 k = θ i - θ k)
@@ -1654,10 +1631,10 @@ theorem pmad_realizes_mutation_scale_bound
     (seed.B_matrix i j : ℝ)^2 ≤ ((mutate_seed seed k).B_matrix i j : ℝ)^2 := by
   
   -- 1. Actively call the localized variety realization inside the proof tree.
-  -- FIXED: Replaced legacy h_coupling_cancel parameters with h_spectral_contraction and h_torus_wrap
+  -- FIXED: Replaced legacy h_coupling_cancel parameters with h_spectral_contraction
   have h_channel_realization := pmad_realizes_local_acyclic_channel 
     ϕ ω κ ξ seed k i j θ c h_amplitude_i h_amplitude_j h_amplitude_k
-    h_omega_ik h_omega_kj h_spectral_contraction h_torus_wrap h_init_ik h_init_kj
+    h_omega_ik h_omega_kj h_spectral_contraction h_init_ik h_init_kj
     B h_B_nonneg h_flow h_primitive_noise_ik h_primitive_noise_kj h_diff_integrable_ik h_diff_integrable_kj
     h_integrable_ik h_integrable_kj h_noise_squeeze h_uniform_ik h_uniform_kj h_acyclic h_seed_corr_ik h_seed_corr_kj
 
@@ -1665,21 +1642,21 @@ theorem pmad_realizes_mutation_scale_bound
   have h_seed_cross := h_channel_realization.right.right
 
   -- Derive strict positivity for the (i, k) network edge from the uniform channel bounds
-  -- FIXED: Replaced legacy h_coupling_cancel_ik with h_spectral_contraction and h_torus_wrap
+  -- FIXED: Replaced legacy h_coupling_cancel_ik with h_spectral_contraction
   have h_ik_pos : seed.B_matrix i k > 0 := by
     obtain ⟨ε, hε, hε_lower⟩ := h_uniform_ik
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
-      ϕ ω κ ξ seed i k θ c h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_torus_wrap h_init_ik
+      ϕ ω κ ξ seed i k θ c h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_init_ik
       B h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik h_noise_squeeze 
       h_seed_corr_ik ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- Derive strict positivity for the (k, j) network edge from the uniform channel bounds
-  -- FIXED: Replaced legacy h_coupling_cancel_kj with h_spectral_contraction and h_torus_wrap
+  -- FIXED: Replaced legacy h_coupling_cancel_kj with h_spectral_contraction
   have h_kj_pos : seed.B_matrix k j > 0 := by
     obtain ⟨ε, hε, hε_lower⟩ := h_uniform_kj
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
-      ϕ ω κ ξ seed k j θ c h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_torus_wrap h_init_kj
+      ϕ ω κ ξ seed k j θ c h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_init_kj
       B h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj h_noise_squeeze 
       h_seed_corr_kj ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
@@ -1754,9 +1731,7 @@ theorem pmad_realizes_mutation_increment
     (h_omega_ik : ω i = ω k)
     (h_omega_kj : ω k = ω j)
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))  
 
     -- Initial Phase Offset Coordination across both sub-channels
     (h_init_ik : ϕ 0 i - ϕ 0 k = θ i - θ k)
@@ -1792,31 +1767,31 @@ theorem pmad_realizes_mutation_increment
     (seed.B_matrix i j : ℝ) ≤ ((mutate_seed seed k).B_matrix i j : ℝ) := by
 
   -- 1. Realize the two positive PMAD channels and obtain the local-acyclicity consequence B_ij ≥ 0.
-  -- FIXED: Replaced legacy h_coupling_cancel parameters with h_spectral_contraction and h_torus_wrap
+  -- FIXED: Replaced legacy h_coupling_cancel parameters with h_spectral_contraction and
   have h_channel_realization := pmad_realizes_local_acyclic_channel 
     ϕ ω κ ξ seed k i j θ c h_amplitude_i h_amplitude_j h_amplitude_k
-    h_omega_ik h_omega_kj h_spectral_contraction h_torus_wrap h_init_ik h_init_kj
+    h_omega_ik h_omega_kj h_spectral_contraction h_init_ik h_init_kj
     B h_B_nonneg h_flow h_primitive_noise_ik h_primitive_noise_kj h_diff_integrable_ik h_diff_integrable_kj
     h_integrable_ik h_integrable_kj h_noise_squeeze h_uniform_ik h_uniform_kj h_acyclic h_seed_corr_ik h_seed_corr_kj
 
   have h_seed_cross : seed.B_matrix i j ≥ 0 := h_channel_realization.right.right
 
   -- Derive strict positivity for the (i, k) network edge from the uniform channel bounds
-  -- FIXED: Replaced legacy h_coupling_cancel_ik with h_spectral_contraction and h_torus_wrap
+  -- FIXED: Replaced legacy h_coupling_cancel_ik with h_spectral_contraction
   have h_ik_pos : seed.B_matrix i k > 0 := by
     obtain ⟨ε, hε, hε_lower⟩ := h_uniform_ik
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
-      ϕ ω κ ξ seed i k θ c h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_torus_wrap h_init_ik
+      ϕ ω κ ξ seed i k θ c h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_init_ik
       B h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik h_noise_squeeze 
       h_seed_corr_ik ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- Derive strict positivity for the (k, j) network edge from the uniform channel bounds
-  -- FIXED: Replaced legacy h_coupling_cancel_kj with h_spectral_contraction and h_torus_wrap
+  -- FIXED: Replaced legacy h_coupling_cancel_kj with h_spectral_contraction
   have h_kj_pos : seed.B_matrix k j > 0 := by
     obtain ⟨ε, hε, hε_lower⟩ := h_uniform_kj
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
-      ϕ ω κ ξ seed k j θ c h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_torus_wrap h_init_kj
+      ϕ ω κ ξ seed k j θ c h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_init_kj
       B h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj h_noise_squeeze 
       h_seed_corr_kj ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
@@ -2016,9 +1991,7 @@ theorem pmad_realizes_eventual_sign_along_path
     (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
     (h_omega_global : ∀ u v : N, ω u = ω v)
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
     (h_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
     (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
     (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
@@ -2039,7 +2012,7 @@ theorem pmad_realizes_eventual_sign_along_path
     -- FIXED: Added parentheses around (h_init_global u v) to prevent argument layout shifting
     exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed u v θ c 
       (h_amplitude_global u) (h_amplitude_global v) (h_omega_global u v) 
-      h_spectral_contraction h_torus_wrap (h_init_global u v) B h_B_nonneg h_flow 
+      h_spectral_contraction (h_init_global u v) B h_B_nonneg h_flow 
       (h_primitive_noise_global u v) (h_diff_integrable_global u v) (h_integrable_global u v) 
       h_noise_squeeze (h_seed_corr_global u v)
 
@@ -2276,9 +2249,7 @@ theorem pmad_drives_extended_g_matrix_transport
     (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
     (h_omega_global : ∀ u v : N, ω u = ω v)
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
     (h_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
     (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
     (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
@@ -2297,7 +2268,7 @@ theorem pmad_drives_extended_g_matrix_transport
   have h_vorticity_bridges : ∀ u v : N, Tendsto (fun T => P_traj T u v) atTop (𝓝 (seed_B u v)) := by
     intro u v
     -- FIXED: Added parentheses around (h_init_global u v) to maintain uniform argument tracking
-    exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed u v θ c (h_amplitude_global u) (h_amplitude_global v) (h_omega_global u v) h_spectral_contraction h_torus_wrap (h_init_global u v) B h_B_nonneg h_flow (h_primitive_noise_global u v) (h_diff_integrable_global u v) (h_integrable_global u v) h_noise_squeeze (h_seed_corr_global u v)
+    exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed u v θ c (h_amplitude_global u) (h_amplitude_global v) (h_omega_global u v) h_spectral_contraction (h_init_global u v) B h_B_nonneg h_flow (h_primitive_noise_global u v) (h_diff_integrable_global u v) (h_integrable_global u v) h_noise_squeeze (h_seed_corr_global u v)
   exact extended_g_matrix_seq_limit_transport P_traj C_seq G_seq seed_B seed_C seed_G path h_vorticity_bridges h_C_convergence h_G_convergence i j
 
 /-- Propositional Equivalence Bridge for Tier 3:
@@ -2327,9 +2298,7 @@ theorem pmad_realizes_exchange_graph_morphism
     (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
     (h_omega_global : ∀ u v : N, ω u = ω v)
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
     (h_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
     (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
     (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
@@ -2353,7 +2322,7 @@ theorem pmad_realizes_exchange_graph_morphism
   dsimp [terminal_chart]
   rw [evaluate_chart_path_eq_mutate_joint_seq]
   exact pmad_drives_extended_g_matrix_transport C_seq G_seq seed_C seed_G path i j
-    ϕ ω κ ξ seed θ c h_amplitude_global h_omega_global h_spectral_contraction h_torus_wrap h_init_global 
+    ϕ ω κ ξ seed θ c h_amplitude_global h_omega_global h_spectral_contraction h_init_global 
     B h_B_nonneg h_flow h_primitive_noise_global h_diff_integrable_global h_integrable_global 
     h_noise_squeeze h_seed_corr_global h_C_convergence h_G_convergence
   
@@ -2397,9 +2366,7 @@ theorem pmad_morphism_respects_path_concatenation
     (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
     (h_omega_global : ∀ u v : N, ω u = ω v)
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
     (h_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
     (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
     (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
@@ -2426,7 +2393,7 @@ theorem pmad_morphism_respects_path_concatenation
   
   -- Step 3: Instantiate the core physical realization
   have h_phys := pmad_realizes_exchange_graph_morphism C_seq G_seq seed_C seed_G (path1 ++ path2) i j
-    ϕ ω κ ξ seed θ c h_amplitude_global h_omega_global h_spectral_contraction h_torus_wrap h_init_global 
+    ϕ ω κ ξ seed θ c h_amplitude_global h_omega_global h_spectral_contraction h_init_global 
     B h_B_nonneg h_flow h_primitive_noise_global h_diff_integrable_global h_integrable_global 
     h_noise_squeeze h_seed_corr_global h_C_convergence h_G_convergence
     

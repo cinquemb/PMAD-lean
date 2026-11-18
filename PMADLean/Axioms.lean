@@ -32,18 +32,15 @@ def IsDynamicallyStable (lambda : ℝ) : Prop :=
     iff it can be resolved as the strict intersection of a nested open stack, 
     where the stability condition (IsDynamicallyStable lambda) forces the dynamic 
     trajectory to restrict to tighter open sheets over time. -/
-def AttractorSet 
-    (A : Set (PhaseState N)) 
-    (lambda : ℝ := -1) 
-    : Prop :=
-  IsDynamicallyStable lambda → 
-    ∀ (ϕ : Trajectory N),
-      ∃ (𝓤 : ℝ → Set (PhaseState N)),
-        (∀ α, IsOpen (𝓤 α)) ∧
-        (⋂ α > 0, 𝓤 α = A) ∧
-        (∀ α₁ α₂, α₁ ≤ α₂ → 𝓤 α₁ ⊆ 𝓤 α₂) ∧
-        (∀ t > 0, ϕ t ∈ 𝓤 (Real.exp (lambda * t)))
-
+def AttractorSet (N : Type*) (IsFlow : Trajectory N → Prop)
+    (A : Set (PhaseState N)) (lambda_bound : ℝ) : Prop :=
+  IsDynamicallyStable lambda_bound →
+  ∀ (ϕ : Trajectory N), IsFlow ϕ →
+    ∃ (𝓤 : ℝ → Set (PhaseState N)),
+      (∀ α, IsOpen (𝓤 α)) ∧
+      (⋂ α > 0, 𝓤 α = A) ∧
+      (∀ α₁ α₂, α₁ ≤ α₂ → 𝓤 α₁ ⊆ 𝓤 α₂) ∧
+      (∀ t > 0, ϕ t ∈ 𝓤 (Real.exp (lambda_bound * t)))
 
 -- =========================================================================
 -- ⚡ AXIOM A4 — Ubiquitous Resonance

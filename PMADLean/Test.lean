@@ -154,18 +154,16 @@ theorem pmad_rg_attractor_convergence_time
     (μ_spectrum : M → ℝ) (Ω₁ Ω₂ : ℝ) (h_Ω₁ : 0 < Ω₁) (h_step : Ω₁ ≤ Ω₂) 
     (lambda_max : ℝ → ℝ) (h_stable : IsAdmissibleAttractor lambda_max)
     
-    -- This matches what your circular THEOREM actually expects as its first hypothesis input:
+    -- Matches the updated physical spectral contraction bridge:
     (h_spectral_contraction : ∀ (ϕ' : Trajectory M), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (ϕ' : Trajectory M), ¬ IsPmadFlow ϕ' ω κ ξ B → 
       ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
     
     AttractorDimensionality μ_spectrum Ω₂ ≤ (Fintype.card M : ℝ) ∧ 
     AttractorDimensionality μ_spectrum Ω₂ ≤ AttractorDimensionality μ_spectrum Ω₁ ∧
     IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N := by
   
-  -- 1. Construct the physical bridge using your current circular signature setup
-  have h_attractor := pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction h_torus_wrap
+  -- 1. Construct the physical bridge using the updated signature
+  have h_attractor := pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
                         
   -- 2. Clear the existential quantifier using obtain to introduce fresh variables safely
   obtain ⟨AttractorField, _h_field_converges⟩ := h_attractor
@@ -174,6 +172,7 @@ theorem pmad_rg_attractor_convergence_time
   exact ⟨dynamics_to_renormalization_capacity_bound μ_spectrum Ω₂ lambda_max h_stable, 
          rg_flow_c_theorem_analog μ_spectrum Ω₁ Ω₂ h_Ω₁ h_step, 
          spiral_shor_like_subexponential_bound cfg⟩
+
 
 
 
@@ -344,9 +343,7 @@ theorem stochastic_gradient_linearity
     (h_amplitude_j : c j = Complex.exp (Complex.I * (θ j : ℂ)))
     (h_omega : ω i = ω j)
     (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory M), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_torus_wrap : ∀ (B_bound : ℝ) (ϕ' : Trajectory M), ¬ IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))     
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
     (h_primitive_noise : ∀ (t : ℝ), |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ (t : ℝ), IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t)
@@ -369,7 +366,7 @@ theorem stochastic_gradient_linearity
   -- 1. Unify the core closed-loop noise integration from Probability.lean
   have h_probability_bound : |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
     have h_call := born_rule_noise_degradation_bound_derive_ftc_evolution
-      ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega (h_spectral_contraction B) (h_torus_wrap B) h_primitive_noise h_init h_diff_integrable T hT
+      ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega (h_spectral_contraction B) h_primitive_noise h_init h_diff_integrable T hT
     have h_integrable_cast : IntervalIntegrable (fun t => Complex.exp (Complex.I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) MeasureTheory.volume 0 T := by
       exact h_integrable
     exact h_call h_integrable_cast
