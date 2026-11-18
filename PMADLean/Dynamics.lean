@@ -805,7 +805,42 @@ theorem uniform_kuramoto_converges_to_attractor
         t ht lambda_bound h_ge_phys h_le_zero i j)
   exact ⟨A, fun lambda_bound h_ge h_le => hA lambda_bound ⟨h_ge, h_le⟩⟩
 
-
+/-- Relation Theorem: Strong-Coupling / Adiabatic Limit Bridge.
+Derives the `h_spectral_contraction` hypothesis from uniform Kuramoto coupling
+in the strong-coupling / adiabatic limit (`K` dominating any target decay rate
+`lambda_bound ≤ 0`) and invokes `pmad_flow_converges_to_attractor` directly. -/
+theorem kuramoto_strong_coupling_limit_to_pmad_attractor
+    [Nonempty N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B Δω r₀ : ℝ)
+    (hr₀_nonneg : 0 ≤ r₀) (hr₀_le_half_pi : r₀ ≤ Real.pi / 2)
+    (h_detuning : ∀ i j, |ω i - ω j| ≤ Δω)
+    (h_noise : ∀ t i, |ξ t i| ≤ B)
+    -- Basin invariance of admissible physical flows inside the synchronization cone
+    (h_basin_invariance : ∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
+      (∀ i j, |ϕ 0 i - ϕ 0 j| < 1) ∧ (∀ t a b, |ϕ t a - ϕ t b| ≤ r₀))
+    -- Strong-coupling / adiabatic regime: for any target decay rate `lambda_bound ≤ 0`,
+    -- the effective uniform coupling `K` is strong enough to enforce dissipation at rate `lambda_bound`
+    (h_strong_coupling : ∀ lambda_bound ≤ (0 : ℝ), ∃ K > 0,
+      (∀ i j, κ i j = K / (Fintype.card N : ℝ)) ∧
+      (∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
+        ∀ t i j, (Δω + 2 * B) * |ϕ t i - ϕ t j| ≤
+          ((2 / Real.pi) * K * Real.cos r₀ + lambda_bound) * (ϕ t i - ϕ t j) ^ 2)) :
+    ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ),
+      AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound := by
+  -- 1. Derive `h_spectral_contraction` from Jordan's inequality + Grönwall contraction
+  have h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
+    intro ϕ' h_flow t ht lambda_bound h_le_zero i j
+    obtain ⟨h_init, h_cone⟩ := h_basin_invariance ϕ' h_flow
+    obtain ⟨K, hK, h_unif, h_marg⟩ := h_strong_coupling lambda_bound h_le_zero
+    have h_diss := fun s a b =>
+      uniform_kuramoto_detuning_to_dissipation ω κ ξ B K Δω r₀ lambda_bound
+        hK hr₀_nonneg hr₀_le_half_pi h_unif h_detuning h_noise
+        ϕ' s (h_cone s) a b (h_marg ϕ' h_flow s a b)
+    exact kuramoto_detuning_spectral_contraction ω κ ξ B lambda_bound h_le_zero
+      ϕ' h_flow h_init h_diss t ht lambda_bound le_rfl h_le_zero i j
+  -- 2. Invoke `pmad_flow_converges_to_attractor` directly
+  exact pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
 
 omit [DecidableEq N] in
 /-- Invariance under global phase shift.
