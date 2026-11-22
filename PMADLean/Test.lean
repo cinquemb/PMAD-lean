@@ -71,7 +71,7 @@ structure SpiralLatticeRegime
     {M : Type} [DecidableEq M] [Fintype M]
     (cfg : SpiralAlgoConfig)
     (μ_spectrum : M → ℝ) (Ω gradE η r : ℝ)
-    (w : DualToneWaveform) (J h0 h1 : ℝ) : Prop where
+    (w : DualToneWaveform) (J h0 h1 : ℝ) : Type where
   h_Ω : 0 < Ω
   h_η : η > 0
   h_gradE : gradE ≥ (AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1)) + 1
@@ -81,7 +81,6 @@ structure SpiralLatticeRegime
   h_h0 : h0 ≥ 0
   h_h1 : h1 ≥ 0
   h_bounds : r < Ω ∧ PhaseGradientStep Ω gradE η > r
-
 
 /-- Formal proof that the loop execution size remains strictly polynomial in `log N`. -/
 lemma executionStepCount_polynomial (cfg : SpiralAlgoConfig) :
