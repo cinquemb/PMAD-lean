@@ -331,45 +331,32 @@ theorem global_non_linear_lattice_convergence
 /-- THE STOCHASTIC GRADIENT DESCENT COMPLEXITY THEOREM:
     Bridges Probabilty. closed-loop noise integration
     directly to the gradient descent optimization path over the physical lattice.
-    LOAD-BEARING INTERACTION: Forces the macroscopic Born probability noise floor 
+    Forces the macroscopic Born probability noise floor 
     and the continuous optimization contraction matrix to be evaluated in tandem,
     proving that physical noise fluctuations cannot break the linear complexity bounds. -/
 theorem stochastic_gradient_linearity
     {M : Type} [DecidableEq M] [Fintype M] (cfg : SpiralAlgoConfig)
-    (ϕ : Trajectory M) (ω : M → ℝ) (κ : M → M → ℝ) (ξ : ℝ → M → ℝ) (B : ℝ) (h_B : 0 ≤ B)
-    (h_flow : IsPmadFlow ϕ ω κ ξ B)
+    (ϕ : Trajectory M) (ω : M → ℝ) (κ : M → M → ℝ) (ξ : ℝ → M → ℝ) (B : ℝ)
     (i j : M) (θ : M → ℝ) (c : M → ℂ)
-    (h_amplitude_i : c i = Complex.exp (Complex.I * (θ i : ℂ)))
-    (h_amplitude_j : c j = Complex.exp (Complex.I * (θ j : ℂ)))
-    (h_omega : ω i = ω j)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory M), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
-    (h_primitive_noise : ∀ (t : ℝ), |ξ t i - ξ t j| ≤ 2 * B)
-    (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
-    (h_diff_integrable : ∀ (t : ℝ), IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t)
+    (reg : ResonantPhaseRegime ϕ ω κ ξ B c θ)
     (T : ℝ) (hT : 0 < T)
     (μ_spectrum : M → ℝ) (Ω : ℝ) (gradE : ℝ) (η : ℝ) (r : ℝ)
-    (h_Ω : 0 < Ω) (h_η : η > 0) 
-    (h_gradE : gradE ≥ (AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1)) + 1) 
+    (h_Ω : 0 < Ω) (h_η : η > 0)
+    (h_gradE : gradE ≥ (AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1)) + 1)
     (h_init_state : CoprimeInitialState cfg.N)
     (w : DualToneWaveform) (h_w : w.carrier_amp = 20)
     (state_vec : MeanFieldState cfg.N) (J h0 h1 : ℝ) (h_J : J ≥ 0) (h_h0 : h0 ≥ 0) (h_h1 : h1 ≥ 0)
-    (h_bounds : r < Ω ∧ Ω - η * gradE > r)
-    (h_integrable : IntervalIntegrable (fun t => Complex.exp (Complex.I * (((ϕ t i : ℝ) - (ϕ t j : ℝ)) : ℂ))) MeasureTheory.volume 0 T) :
+    (h_bounds : r < Ω ∧ Ω - η * gradE > r) :
 
-    ∃ (_c_stochastic : ℝ), 
-      IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N ∧ 
+    ∃ (_c_stochastic : ℝ),
+      IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N ∧
       executionStepCount cfg ≤ (1 / log 2 + 3) * log (cfg.N : ℝ) ∧
 
-      |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
-  
-  -- 1. Unify the core closed-loop noise integration from Probability.lean
-  have h_probability_bound : |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
-    have h_call := born_rule_noise_degradation_bound_derive_ftc_evolution
-      ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega (h_spectral_contraction B) h_primitive_noise h_init h_diff_integrable T hT
-    have h_integrable_cast : IntervalIntegrable (fun t => Complex.exp (Complex.I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) MeasureTheory.volume 0 T := by
-      exact h_integrable
-    exact h_call h_integrable_cast
+      |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
+
+  -- 1. Unify the core closed-loop noise integration via `ResonantPhaseRegime`
+  have h_probability_bound : |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T :=
+    born_rule_noise_degradation_of_regime reg i j T hT
 
   -- 2. Pull the global non-linear lattice convergence pass to resolve the complexity bounds
   have h_convergence := global_non_linear_lattice_convergence
@@ -379,7 +366,7 @@ theorem stochastic_gradient_linearity
   have h_vel_check := mean_field_velocity_bounded cfg J h0 h1 h_J h_h0 h_h1 state_vec
   rcases h_vel_check with ⟨L_val, h_L_pos, _⟩
 
-  have _h_stochastic_interaction : L_val * |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ L_val * (4 * B * T) := by
+  have _h_stochastic_interaction : L_val * |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ L_val * (4 * B * T) := by
     exact mul_le_mul_of_nonneg_left h_probability_bound h_L_pos
 
   -- 4. Definitively unpack the existential package correctly via obtain to seal the pass
@@ -388,6 +375,5 @@ theorem stochastic_gradient_linearity
   have h_poly := h_subexp_and_poly.2
 
   exact ⟨L_con, h_subexp, h_poly, h_probability_bound⟩
-
 
 end PMADLean.Test

@@ -74,6 +74,23 @@ noncomputable def IsInArnoldTongue
     (T : ℝ) : Prop :=
   ∀ i j, |ω i - ω j| < ‖PhaseOverlapFunctional ϕ ω κ ξ B_noise h_dyn i j T‖ * κ i j
 
+/-- Bundled Resonant Phase-Locked Regime:
+Consolidates the physical conditions for matched, noise-bounded PMAD trajectories into a
+single reusable structure (with `h_primitive_noise` and `h_integrable` eliminated automatically
+by `pmad_flow_noise_diff_bound` and `pmad_flow_overlap_intervalIntegrable`). -/
+structure ResonantPhaseRegime
+    {N : Type*} [Fintype N]
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
+    (B : ℝ) (c : N → ℂ) (θ : N → ℝ) : Prop where
+  h_B : 0 ≤ B
+  h_flow : IsPmadFlow ϕ ω κ ξ B
+  h_amplitude : ∀ i, c i = Complex.exp (Complex.I * (θ i : ℂ))
+  h_omega : ∀ i j, ω i = ω j
+  h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
+    ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)
+  h_init : ∀ i j, ϕ 0 i - ϕ 0 j = θ i - θ j
+  h_diff_integrable : ∀ t i j, IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t
+
 /-- Proves that the collective phase coherence parameter R(t) 
 always stays strictly bounded within the physical unit interval. -/
 theorem phase_order_parameter_bounds_constructive {N : Type*} [Fintype N] (ϕ : Trajectory N) (t : ℝ) :
@@ -397,8 +414,36 @@ theorem derive_ftc_evolution
   rw [h_init] at h_ftc
   linarith
 
+omit [DecidableEq N] in
+/-- Eliminates `h_primitive_noise` across the entire repository:
+Derives `|ξ t i - ξ t j| ≤ 2 * B` directly from `IsPmadFlow`'s bounded-noise field `h_flow.1`. -/
+lemma pmad_flow_noise_diff_bound
+    {ϕ : Trajectory N} {ω : N → ℝ} {κ : N → N → ℝ} {ξ : ℝ → N → ℝ} {B : ℝ}
+    (h_flow : IsPmadFlow ϕ ω κ ξ B) (t : ℝ) (i j : N) :
 
+    |ξ t i - ξ t j| ≤ 2 * B := by
+  have hi := h_flow.1 t i
+  have hj := h_flow.1 t j
+  have h_tri := abs_sub_le (ξ t i) 0 (ξ t j)
+  rw [sub_zero, zero_sub, abs_neg] at h_tri
+  linarith
 
+omit [DecidableEq N] in
+/-- Eliminates `h_integrable` across the entire repository:
+Because `IsPmadFlow` guarantees differentiability (`HasDerivAt`) of every coordinate `ϕ · i`,
+the phase-overlap integrand `t ↦ exp (I * (ϕ t i - ϕ t j))` is continuous everywhere and
+therefore `IntervalIntegrable` on `[0, T]` automatically. -/
+lemma pmad_flow_overlap_intervalIntegrable
+    {ϕ : Trajectory N} {ω : N → ℝ} {κ : N → N → ℝ} {ξ : ℝ → N → ℝ} {B : ℝ}
+    (h_flow : IsPmadFlow ϕ ω κ ξ B) (i j : N) (T : ℝ) :
+    IntervalIntegrable
+      (fun t => Complex.exp (Complex.I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) MeasureTheory.volume 0 T := by
+  apply Continuous.intervalIntegrable
+  have h_cont_i : Continuous (fun t => ϕ t i) :=
+    continuous_iff_continuousAt.mpr (fun t => (h_flow.2 t i).continuousAt)
+  have h_cont_j : Continuous (fun t => ϕ t j) :=
+    continuous_iff_continuousAt.mpr (fun t => (h_flow.2 t j).continuousAt)
+  fun_prop
 
 omit [DecidableEq N] in
 /-- CLOSED-LOOP NOISE INTEGRATION THEOREM (Trajectory-Derived)
@@ -651,6 +696,27 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
   refine le_trans h_final_calc ?_
   rw [← mul_assoc, one_div_mul_cancel (ne_of_gt hT), one_mul]
 
+omit [DecidableEq N] in
+/-- Single-Regime Wrapper for `born_rule_noise_degradation_bound_derive_ftc_evolution`:
+Takes a single `ResonantPhaseRegime` bundle and automatically supplies
+`pmad_flow_noise_diff_bound` and `pmad_flow_overlap_intervalIntegrable`, reducing
+a 10-hypothesis call site to one argument. -/
+theorem born_rule_noise_degradation_of_regime
+    {ϕ : Trajectory N} {ω : N → ℝ} {κ : N → N → ℝ} {ξ : ℝ → N → ℝ}
+    {B : ℝ} {c : N → ℂ} {θ : N → ℝ}
+    (reg : ResonantPhaseRegime ϕ ω κ ξ B c θ)
+    (i j : N) (T : ℝ) (hT : 0 < T) :
+
+    |(PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T).re - AmplitudeWeight c i j| ≤ 4 * B * T :=
+  born_rule_noise_degradation_bound_derive_ftc_evolution
+    ϕ ω κ ξ B reg.h_B reg.h_flow i j θ c
+    (reg.h_amplitude i) (reg.h_amplitude j)
+    (reg.h_omega i j) reg.h_spectral_contraction
+    (fun t => pmad_flow_noise_diff_bound reg.h_flow t i j)
+    (reg.h_init i j)
+    (fun t => reg.h_diff_integrable t i j)
+    T hT
+    (pmad_flow_overlap_intervalIntegrable reg.h_flow i j T)
 
 /-- Theorem: Empirical Data Pipeline Concentration Bound.
     Rigorously proves that if a physical phase trajectory has a lipschitz-bounded 

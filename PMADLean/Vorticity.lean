@@ -365,6 +365,34 @@ noncomputable def variety_invariant {N : Type*} [DecidableEq N] [Fintype N]
   let terminal_chart := evaluate_chart_path B_init (VarietyChart.mk B_init C_init G_init) path
   terminal_chart.G
 
+/-- Bundled Noisy Microscale Censorship Regime:
+Consolidates the RG scale flow, substrate capacity, phase-order lower bound,
+Arnold-tongue trapping, and emergence envelope hypotheses into a single reusable
+record for `pmad_micro_censorship_alltime_noisy` and its cluster-variety consumers. -/
+structure NoisyCensorshipRegime
+    {N : Type*} [DecidableEq N] [Fintype N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B_noise : ℝ)
+    (ϕ : Trajectory N)
+    (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
+    (μ_spectrum : N → ℝ) (Ω : ℝ → ℝ) (Ω_min : ℝ)
+    (g : Matrix N N ℝ) (r R_ϕ δ T : ℝ) : Prop where
+  h_B : 0 ≤ B_noise
+  h_dyn : IsPmadFlow ϕ ω κ ξ B_noise
+  hΩ_min : 0 ≤ Ω_min
+  h_rg_flow : ∀ t, Ω_min ≤ Ω t
+  h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N
+  hR_ϕ_nonneg : 0 ≤ R_ϕ
+  h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ
+  hδ_pos : 0 < δ
+  h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ t)^2
+  hT : 0 < T
+  h_arnold_tongue : IsInArnoldTongue ω κ ξ B_noise ϕ h_dyn T
+  h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j =
+    (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B_noise h_dyn i j T‖) / (Fintype.card N : ℝ)^2
+  h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) -
+    (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤
+    (Fintype.card N : ℝ)^2 * (4 * B_noise * T)
+    
 -- Isolate the variable omission strictly to the tensor proof that does not use matrices
 omit [DecidableEq N] [Fintype N] in
 /-- Lemma: Structural Proof of Anti-Symmetry for the Phase Vorticity Tensor. -/
@@ -919,49 +947,39 @@ omit [DecidableEq N] in
     natively deriving the `h_order_parameter_handshake` requested by `pmad_micro_censorship_alltime` without placeholders or programmatic premises. -/
 theorem derive_order_parameter_handshake_from_dynamics
     (ω : N → ℝ)
-    (κ : N → N → ℝ) 
-    (ϕ : Trajectory N) 
+    (κ : N → N → ℝ)
+    (ϕ : Trajectory N)
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
     (θ : N → ℝ) (c : N → ℂ)
     (t : ℝ) (T : ℝ) (hT : 0 < T) (Ω : ℝ) (r : ℝ)
-    (h_flow : IsPmadFlow ϕ ω κ (fun _ _ => 0) 0)
-    (h_amplitude_i : ∀ i : N, c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : ∀ j : N, c j = exp (I * (θ j : ℂ)))
-    (h_omega : ∀ i j : N, ω i = ω j)
-    -- FIXED: Substituted (fun _ _ => 0) for ξ and 0 for B below
-    (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ (fun _ _ => 0) 0 → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_primitive_noise : ∀ (_t' : ℝ) (_i _j : N), |(0 : ℝ) - 0| ≤ 2 * 0)
-    (h_init : ∀ i j : N, ϕ 0 i - ϕ 0 j = θ i - θ j)
-    (h_diff_integrable : ∀ (t' : ℝ) (_i _j : N), IntervalIntegrable (fun _ => (0:ℝ) - 0) volume 0 t')
-    (h_integrable : ∀ i j : N, IntervalIntegrable (fun t' => exp (I * ((ϕ t' i : ℂ) - (ϕ t' j : ℂ)))) volume 0 T)
+    (reg : ResonantPhaseRegime ϕ ω κ (fun _ _ => 0) 0 c θ)
     (h_locked_diff : ∀ t' ∈ Set.Ioc 0 T, ∀ i j : N, (ϕ t' i : ℝ) - (ϕ t' j : ℝ) = θ i - θ j)
     (_h_snapshot_lock : ∀ i j : N, (ϕ t i : ℝ) - (ϕ t j : ℝ) = θ i - θ j)
-    (h_imag_locked : ∀ i j : N, (PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T - AmplitudeWeight c i j).im = 0)
+    (h_imag_locked : ∀ i j : N, (PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T - AmplitudeWeight c i j).im = 0)
     (h_static_trace_handshake : (∑ i, ∑ j, (κ i j * ‖exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖) / (Fintype.card N : ℝ)^2) =
-      -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i Ω)^2) / ((PhaseOrderParameter ϕ t)^2)))) 
-    (h_vorticity_equilibrium_zero : ∀ i j, PhaseVorticityTensor κ ϕ t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T‖) / (Fintype.card N : ℝ)^2) :
+      -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i Ω)^2) / ((PhaseOrderParameter ϕ t)^2))))
+    (h_vorticity_equilibrium_zero : ∀ i j, PhaseVorticityTensor κ ϕ t i j =
+      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T‖) / (Fintype.card N : ℝ)^2) :
 
-    (∑ i, ∑ j, (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T‖) / (Fintype.card N : ℝ)^2) =
+    (∑ i, ∑ j, (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T‖) / (Fintype.card N : ℝ)^2) =
       -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i Ω)^2) / ((PhaseOrderParameter ϕ t)^2))) := by
 
   -- Step 1: Physical consumption of the grid error LEMMA.
-  -- Proves that the total network variance collapses to absolute zero in the zero-noise limit.
-  have h_global_fluctuation_vanishing : |∑ i : N, ∑ j : N, ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ 0 := by
+  have h_global_fluctuation_vanishing : |∑ i : N, ∑ j : N, ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ 0 := by
     have h_raw := complex_norm_error_bound_matrix_grid
-      ϕ ω κ (fun _ _ => 0) 0 (le_refl 0) h_flow θ c h_amplitude_i h_amplitude_j h_omega h_spectral_contraction
-      h_primitive_noise h_init h_diff_integrable T hT h_integrable h_imag_locked
+      ϕ ω κ (fun _ _ => 0) 0 reg.h_B reg.h_flow θ c reg.h_amplitude reg.h_amplitude reg.h_omega reg.h_spectral_contraction
+      (fun t' i j => pmad_flow_noise_diff_bound reg.h_flow t' i j) reg.h_init reg.h_diff_integrable T hT
+      (fun i j => pmad_flow_overlap_intervalIntegrable reg.h_flow i j T) h_imag_locked
     linarith
 
   -- Step 2: Use LEMMA 3 pointwise to reduce the historical integrals down to static snapshot offsets
-  have h_functional_collapse : ∀ i j : N, PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T = exp (I * ((θ i : ℂ) - (θ j : ℂ))) := by
+  have h_functional_collapse : ∀ i j : N, PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T = exp (I * ((θ i : ℂ) - (θ j : ℂ))) := by
     intro i j
-    exact phase_overlap_locked_time_collapse ω κ (fun _ _ => 0) 0 ϕ h_flow i j θ T hT (h_init i j)
+    exact phase_overlap_locked_time_collapse ω κ (fun _ _ => 0) 0 ϕ reg.h_flow i j θ T hT (reg.h_init i j)
       (fun t' ht' => h_locked_diff t' ht' i j)
 
   -- Step 3: Map the summation grid to the active vorticity tensor configuration
-  have h_tensor_bridge : (∑ i, ∑ j, (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T‖) / (Fintype.card N : ℝ)^2) =
+  have h_tensor_bridge : (∑ i, ∑ j, (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T‖) / (Fintype.card N : ℝ)^2) =
                          (∑ i, ∑ j, PhaseVorticityTensor κ ϕ t i j) := by
     simp_rw [← h_vorticity_equilibrium_zero]
 
@@ -969,15 +987,12 @@ theorem derive_order_parameter_handshake_from_dynamics
   have h_sum_rewrite : (∑ i, ∑ j, PhaseVorticityTensor κ ϕ t i j) =
                        (∑ i, ∑ j, (κ i j * ‖exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖) / (Fintype.card N : ℝ)^2) := by
     simp_rw [h_vorticity_equilibrium_zero, h_functional_collapse]
-  
+
   -- Step 5: Close the entire macro-micro loop via clean transitivity
   rw [h_tensor_bridge, h_sum_rewrite]
-  
+
   -- Close the proof by directly applying the handshake condition.
   exact h_static_trace_handshake
-
-
-
 
 /-- DERIVING the macro-scale metric profile expression from the underlying microscale 
     vorticity and order parameter definitions inside the synchronized domain. -/
@@ -1021,52 +1036,41 @@ theorem derive_arnold_tongue_emergence_identity
 -- The Final Complete End-to-End Emergent Censorship Theorem
 theorem pmad_micro_censorship_alltime
     (ω : N → ℝ)
-    (κ : N → N → ℝ) 
-    (ϕ : Trajectory N) 
+    (κ : N → N → ℝ)
+    (ϕ : Trajectory N)
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
-    (μ_spectrum : N → ℝ) 
-    (Ω : ℝ → ℝ)          
-    (Ω_min : ℝ)          
+    (μ_spectrum : N → ℝ)
+    (Ω : ℝ → ℝ)
+    (Ω_min : ℝ)
     (hΩ_min : 0 ≤ Ω_min)
-    (h_rg_flow : ∀ t, Ω_min ≤ Ω t) 
-    (g : Matrix N N ℝ)   
-    (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N) 
-    (r : ℝ) 
+    (h_rg_flow : ∀ t, Ω_min ≤ Ω t)
+    (g : Matrix N N ℝ)
+    (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N)
+    (r : ℝ)
     (R_ϕ : ℝ)
     (hR_ϕ_nonneg : 0 ≤ R_ϕ)
     (h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ)
     (δ : ℝ)
     (hδ_pos : 0 < δ)
     (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ t)^2)
-    (T : ℝ) (hT : 0 < T) 
-    -- 1. Ground the proof in core dynamics primitives under zero noise
-    (h_flow : IsPmadFlow ϕ ω κ (fun _ _ => 0) 0)
+    (T : ℝ) (hT : 0 < T)
     (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : ∀ i : N, c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : ∀ j : N, c j = exp (I * (θ j : ℂ)))
-    (h_omega : ∀ i j : N, ω i = ω j)
-    -- FIXED: Substituted (fun _ _ => 0) for ξ and 0 for B below
-    (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ (fun _ _ => 0) 0 → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_primitive_noise : ∀ (_t' : ℝ) (_i _j : N), |(0 : ℝ) - 0| ≤ 2 * 0)
-    (h_init : ∀ i j : N, ϕ 0 i - ϕ 0 j = θ i - θ j)
-    (h_diff_integrable : ∀ (t' : ℝ) (_i _j : N), IntervalIntegrable (fun _ => (0:ℝ) - 0) volume 0 t')
-    (h_integrable : ∀ i j : N, IntervalIntegrable (fun t' => exp (I * ((ϕ t' i : ℂ) - (ϕ t' j : ℂ)))) volume 0 T)
+    -- 1. Ground the proof in the bundled zero-noise ResonantPhaseRegime
+    (reg : ResonantPhaseRegime ϕ ω κ (fun _ _ => 0) 0 c θ)
     -- 2. Pass the stable phase-locking constraints
-    (h_arnold_tongue : IsInArnoldTongue ω κ (fun _ _ => 0) 0 ϕ h_flow T)
-    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T‖) / (Fintype.card N : ℝ)^2)
+    (h_arnold_tongue : IsInArnoldTongue ω κ (fun _ _ => 0) 0 ϕ reg.h_flow T)
+    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j =
+      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T‖) / (Fintype.card N : ℝ)^2)
     (h_locked_diff : ∀ t' ∈ Set.Ioc 0 T, ∀ i j : N, (ϕ t' i : ℝ) - (ϕ t' j : ℝ) = θ i - θ j)
     -- Quantified over all time to match the dynamic timeline
     (h_snapshot_lock : ∀ (i j : N) (t : ℝ), (ϕ t i : ℝ) - (ϕ t j : ℝ) = θ i - θ j)
-    (h_imag_locked : ∀ i j : N, (PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 h_flow i j T - AmplitudeWeight c i j).im = 0)
+    (h_imag_locked : ∀ i j : N, (PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T - AmplitudeWeight c i j).im = 0)
     (h_static_trace_handshake : ∀ t, (∑ i, ∑ j, (κ i j * ‖exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖) / (Fintype.card N : ℝ)^2) =
       -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2)))) :
     ∃ B : ℝ, ∀ t, |∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j| ≤ B := by
 
-  
   let R_Q := (Fintype.card N : ℝ)
-  
+
   have _h_rg_decay : ∀ t, AttractorDimensionality μ_spectrum (Ω t) ≤ AttractorDimensionality μ_spectrum Ω_min := by
     intro t
     exact rg_flow_finite_monotonicity μ_spectrum Ω_min (Ω t) hΩ_min (h_rg_flow t)
@@ -1088,46 +1092,43 @@ theorem pmad_micro_censorship_alltime
     norm_num
 
   have h_capacity_limit := dynamics_to_renormalization_capacity_bound μ_spectrum Ω_min lambda_stable h_stable_proof
-  
+
   have _h_total_horizon : AttractorDimensionality μ_spectrum Ω_min + (∑ i, ∑ j, g i j) ≤ R_Q + R_Q := by
     linarith [h_capacity_limit, h_substrate]
 
   -- PROVE the dynamic emergence link natively from `derive_order_parameter_handshake_from_dynamics`
-  have h_emergence_def : ∀ t, ∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j = 
+  have h_emergence_def : ∀ t, ∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j =
       -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))) := by
     intro t'
-    -- Compute the handshake identity at time t' natively
     have h_handshake := derive_order_parameter_handshake_from_dynamics
-      ω κ ϕ PhaseVorticityTensor θ c t' T hT (Ω t') r h_flow 
-      h_amplitude_i h_amplitude_j h_omega h_spectral_contraction h_primitive_noise h_init 
-      h_diff_integrable h_integrable h_locked_diff (fun i j => h_snapshot_lock i j t') 
+      ω κ ϕ PhaseVorticityTensor θ c t' T hT (Ω t') r reg
+      h_locked_diff (fun i j => h_snapshot_lock i j t')
       h_imag_locked (h_static_trace_handshake t') (h_vorticity_equilibrium t')
 
-    -- Evaluate the helper identity at time t' to anchor the metric summation
-    have h_id := derive_arnold_tongue_emergence_identity 
-      ω κ (fun _ _ => 0) 0 ϕ h_flow PhaseVorticityTensor t' T (Ω t') r 
+    have h_id := derive_arnold_tongue_emergence_identity
+      ω κ (fun _ _ => 0) 0 ϕ reg.h_flow PhaseVorticityTensor t' T (Ω t') r
       h_arnold_tongue (h_vorticity_equilibrium t') h_handshake
-      
+
     exact h_id
 
   let B_val := 1 + ((2 * R_ϕ * |r| + R_Q^2) / δ)
   use B_val
   intro t
-  
+
   rw [h_emergence_def t]
   rw [abs_neg]
-  
+
   let Num := (2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2)
   let Den := (PhaseOrderParameter ϕ t)^2
-  
+
   have h_triangle := abs_sub 1 (Num / Den)
   rw [abs_one] at h_triangle
 
   have h_div_abs : |Num / Den| = |Num| / |Den| := abs_div Num Den
-  
+
   have h_denom_pos : 0 < Den := lt_of_lt_of_le hδ_pos (h_order_bound t)
   have h_denom_abs : |Den| = Den := abs_of_pos h_denom_pos
-  
+
   have h_num_bound : |Num| ≤ 2 * R_ϕ * |r| + R_Q^2 := by
     have h_num_tri := abs_sub (2 * (∑ i, ϕ t i) * r) ((∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2)
     have h_term1 : |2 * (∑ i, ϕ t i) * r| ≤ 2 * R_ϕ * |r| := by
@@ -1162,6 +1163,7 @@ theorem pmad_micro_censorship_alltime
 
   rw [h_div_abs, h_denom_abs] at h_triangle
   linarith
+
   
 /-- Upgraded Emergent Censorship All-Time Theorem w/ Noise Floor Envelope (B_noise > 0).
     Establishes that even when background noise introduces a persistent 
@@ -1328,7 +1330,22 @@ theorem pmad_micro_censorship_alltime_noisy
   -- Step 11: Final linear collation matching the noisy coordinate envelope witness
   rw [h_div_abs, h_denom_abs] at h_triangle
   linarith
-  
+
+/-- Single-Regime Wrapper for `pmad_micro_censorship_alltime_noisy`. -/
+theorem pmad_micro_censorship_of_regime
+    {N : Type*} [DecidableEq N] [Fintype N]
+    {ω : N → ℝ} {κ : N → N → ℝ} {ξ : ℝ → N → ℝ} {B_noise : ℝ}
+    {ϕ : Trajectory N}
+    {PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ}
+    {μ_spectrum : N → ℝ} {Ω : ℝ → ℝ} {Ω_min : ℝ}
+    {g : Matrix N N ℝ} {r R_ϕ δ T : ℝ}
+    (reg : NoisyCensorshipRegime ω κ ξ B_noise ϕ PhaseVorticityTensor μ_spectrum Ω Ω_min g r R_ϕ δ T) :
+    ∃ B : ℝ, ∀ t, |∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j| ≤ B :=
+  pmad_micro_censorship_alltime_noisy ω κ ξ B_noise reg.h_B ϕ reg.h_dyn
+    PhaseVorticityTensor μ_spectrum Ω Ω_min reg.hΩ_min reg.h_rg_flow g reg.h_substrate
+    r R_ϕ reg.hR_ϕ_nonneg reg.h_phi_bound δ reg.hδ_pos reg.h_order_bound T reg.hT
+    reg.h_arnold_tongue reg.h_vorticity_equilibrium reg.h_emergence_envelope
+
 /-- CLV-Coupled Noisy Singularity Censorship Theorem:
 Combines the noisy microscale fluctuation envelope `R_Q^2 * (4 * B_noise * T)` with a
 verified `CovariantTangentSplitting κ ϕ lambda_s` (`lambda_s < 0`), replacing the
@@ -1342,9 +1359,7 @@ theorem pmad_micro_censorship_clv_noisy
     (κ : N → N → ℝ)
     (ξ : ℝ → N → ℝ)
     (B_noise : ℝ)
-    (h_B : 0 ≤ B_noise)
     (ϕ : Trajectory N)
-    (h_dyn : IsPmadFlow ϕ ω κ ξ B_noise)
     (split : CovariantTangentSplitting κ ϕ lambda_s)
     (h_lambda_strict : lambda_s < 0)
     (α : ℝ)
@@ -1355,24 +1370,9 @@ theorem pmad_micro_censorship_clv_noisy
     (μ_spectrum : N → ℝ)
     (Ω : ℝ → ℝ)
     (Ω_min : ℝ)
-    (hΩ_min : 0 ≤ Ω_min)
-    (h_rg_flow : ∀ t, Ω_min ≤ Ω t)
     (g : Matrix N N ℝ)
-    (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N)
-    (r : ℝ)
-    (R_ϕ : ℝ)
-    (hR_ϕ_nonneg : 0 ≤ R_ϕ)
-    (h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ)
-    (δ : ℝ)
-    (hδ_pos : 0 < δ)
-    (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ t)^2)
-    (T : ℝ) (hT : 0 < T)
-    (h_arnold_tongue : IsInArnoldTongue ω κ ξ B_noise ϕ h_dyn T)
-    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j =
-      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B_noise h_dyn i j T‖) / (Fintype.card N : ℝ)^2)
-    (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) -
-      (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤
-      (Fintype.card N : ℝ)^2 * (4 * B_noise * T))
+    (r R_ϕ δ T : ℝ)
+    (reg : NoisyCensorshipRegime ω κ ξ B_noise ϕ PhaseVorticityTensor μ_spectrum Ω Ω_min g r R_ϕ δ T)
     (h_inverse_eval : ∀ t, (SynthesizedSpacetimeMetricDimCLV d ω κ ϕ split α t μ_spectrum (Ω t) g r) 0 0 =
       -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2)))) :
     IsAdmissibleAttractor (fun _ => lambda_s) ∧
@@ -1395,11 +1395,8 @@ theorem pmad_micro_censorship_clv_noisy
       exact h_int T_val hT_val
     rw [Filter.limsup_congr h_ev, Filter.limsup_const]
     exact h_lambda_strict
-  -- 2. Obtain the noisy microscale bound from `pmad_micro_censorship_alltime_noisy`
-  obtain ⟨B_micro, hB_micro⟩ := pmad_micro_censorship_alltime_noisy
-    ω κ ξ B_noise h_B ϕ h_dyn PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow
-    g h_substrate r R_ϕ hR_ϕ_nonneg h_phi_bound δ hδ_pos h_order_bound T hT
-    h_arnold_tongue h_vorticity_equilibrium h_emergence_envelope
+  -- 2. Obtain the noisy microscale bound via `NoisyCensorshipRegime`
+  obtain ⟨B_micro, hB_micro⟩ := pmad_micro_censorship_of_regime reg
   -- 3. Bound the macroscopic `g₀₀` component with time-dependent `Ω t` and combine all witnesses
   let R_Q := (Fintype.card N : ℝ)
   let B_macro := 1 + ((2 * R_ϕ * |r| + R_Q^2) / δ)
@@ -1412,7 +1409,7 @@ theorem pmad_micro_censorship_clv_noisy
   have h_triangle := abs_sub 1 (Num / Den)
   rw [abs_one] at h_triangle
   have h_div_abs : |Num / Den| = |Num| / |Den| := abs_div Num Den
-  have h_denom_pos : 0 < Den := lt_of_lt_of_le hδ_pos (h_order_bound t)
+  have h_denom_pos : 0 < Den := lt_of_lt_of_le reg.hδ_pos (reg.h_order_bound t)
   have h_denom_abs : |Den| = Den := abs_of_pos h_denom_pos
   have h_num_bound : |Num| ≤ 2 * R_ϕ * |r| + R_Q^2 := by
     have h_num_tri := abs_sub (2 * (∑ i, ϕ t i) * r) ((∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2)
@@ -1421,7 +1418,7 @@ theorem pmad_micro_censorship_clv_noisy
       have h_two : |(2:ℝ)| = 2 := abs_of_pos (by norm_num)
       rw [h_two]
       gcongr
-      exact h_phi_bound t
+      exact reg.h_phi_bound t
     have h_term2 : |(∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2| ≤ R_Q^2 := by
       have h_sq_nonneg : 0 ≤ (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2 := sq_nonneg _
       rw [abs_of_nonneg h_sq_nonneg]
@@ -1433,15 +1430,14 @@ theorem pmad_micro_censorship_clv_noisy
     rw [div_le_iff₀ h_denom_pos]
     have h_step1 : |Num| ≤ (2 * R_ϕ * |r| + R_Q^2) / δ * Den := by
       have h_rearrange : (2 * R_ϕ * |r| + R_Q^2) / δ * Den = ((2 * R_ϕ * |r| + R_Q^2) * Den) / δ := by ring
-      rw [h_rearrange, le_div_iff₀ hδ_pos]
-      have h_order := h_order_bound t
+      rw [h_rearrange, le_div_iff₀ reg.hδ_pos]
+      have h_order : δ ≤ Den := reg.h_order_bound t
       have h_pos_factor : 0 ≤ 2 * R_ϕ * |r| + R_Q^2 := by
-        nlinarith [hR_ϕ_nonneg, abs_nonneg r, sq_nonneg R_Q]
-      nlinarith [h_order, h_pos_factor]
+        nlinarith [reg.hR_ϕ_nonneg, abs_nonneg r, sq_nonneg R_Q]
+      nlinarith [h_order, h_pos_factor, h_num_bound, reg.hδ_pos]
     linarith
   rw [h_div_abs, h_denom_abs] at h_triangle
   linarith
-
   
 omit [DecidableEq N] [Fintype N] in
 /-- THE GEODESIC SINGULARITY CENSORSHIP COUPLING OPERATOR
@@ -1546,65 +1542,48 @@ theorem vorticity_to_cluster_sign_bridge
     the FTC evolution bound under a vanishing noise-horizon mapping, the tracking error 
     term collapses to zero, forcing the type-checker to certify the limit. -/
 theorem derived_vorticity_to_cluster_bridge
-    {N : Type*} [DecidableEq N] [Fintype N] 
+    {N : Type*} [DecidableEq N] [Fintype N]
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (i j : N)
     (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
-    (h_omega : ω i = ω j)
-    -- FIXED: Quantified over an arbitrary noise level B_bound to allow substitution
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
-    (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
-    
-    -- Explicitly type all horizon parameters in the header
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    (h_primitive_noise : ∀ T : ℝ, ∀ t : ℝ, |ξ t i - ξ t j| ≤ 2 * B T)
-    (h_diff_integrable : ∀ T : ℝ, ∀ t : ℝ, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
-    (h_integrable : ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) volume 0 T)
-    
+    (B : ℝ → ℝ)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     -- The Core Squeeze Hypothesis
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
-    
     -- The Constitutive Handshake
     (h_seed_correspondence : (seed.B_matrix i j : ℝ) = (κ i j * AmplitudeWeight c i j) / (Fintype.card N : ℝ)^2) :
-    
-    Tendsto (fun (T : ℝ) => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i j T) / (Fintype.card N : ℝ)^2) 
+    Tendsto (fun (T : ℝ) => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2)
       atTop (𝓝 (seed.B_matrix i j : ℝ)) := by
 
   -- 1. Align the target space coordinate layout via variable substitution
   rw [h_seed_correspondence]
-  
+
   -- 2. Construct the localized error bounding function
-  let ErrorFunc := fun T : ℝ => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i j T) / (Fintype.card N : ℝ)^2 - 
+  let ErrorFunc := fun T : ℝ => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2 -
                                 (κ i j * AmplitudeWeight c i j) / (Fintype.card N : ℝ)^2
-                            
+
   have h_error_bound : ∀ (T : ℝ), 0 < T → |ErrorFunc T| ≤ (|κ i j| / (Fintype.card N : ℝ)^2) * (4 * B T * T) := by
     intro T hT
     dsimp [ErrorFunc]
-    have h_factor : (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i j T) / (Fintype.card N : ℝ)^2 - 
-                    (κ i j * AmplitudeWeight c i j) / (Fintype.card N : ℝ)^2 = 
-                    (κ i j / (Fintype.card N : ℝ)^2) * (MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i j T - AmplitudeWeight c i j) := by ring
+    have h_factor : (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2 -
+                    (κ i j * AmplitudeWeight c i j) / (Fintype.card N : ℝ)^2 =
+                    (κ i j / (Fintype.card N : ℝ)^2) * (MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T - AmplitudeWeight c i j) := by ring
     rw [h_factor, abs_mul]
-    
-    have h_ftc := born_rule_noise_degradation_bound_derive_ftc_evolution
-      ϕ ω κ ξ (B T) (h_B_nonneg T) (h_flow T) i j θ c 
-      h_amplitude_i h_amplitude_j h_omega (h_spectral_contraction (B T)) (h_primitive_noise T) h_init (h_diff_integrable T) T hT (h_integrable T)
-      
+
+    have h_ftc := born_rule_noise_degradation_of_regime (reg T) i j T hT
+
     have h_abs_div : |κ i j / (Fintype.card N : ℝ)^2| = |κ i j| / (Fintype.card N : ℝ)^2 := by
       rw [abs_div]
       have h_denom_nonneg : 0 ≤ (Fintype.card N : ℝ)^2 := by positivity
       rw [abs_of_nonneg h_denom_nonneg]
     rw [h_abs_div]
-    
+
     have h_scale_nonneg : 0 ≤ |κ i j| / (Fintype.card N : ℝ)^2 := div_nonneg (abs_nonneg _) (by positivity)
     exact mul_le_mul_of_nonneg_left h_ftc h_scale_nonneg
 
   -- 3. Run the topological squeeze over the vanishing neighborhood filter
   rw [tendsto_iff_norm_sub_tendsto_zero]
-  
+
   have h_limit_ceiling : Tendsto (fun (T : ℝ) => (|κ i j| / (Fintype.card N : ℝ)^2) * (4 * B T * T)) atTop (𝓝 0) := by
     have h_const : Tendsto (fun (_T : ℝ) => |κ i j| / (Fintype.card N : ℝ)^2) atTop (𝓝 (|κ i j| / (Fintype.card N : ℝ)^2)) := tendsto_const_nhds
     have h_final := Tendsto.mul h_const h_noise_squeeze
@@ -1617,16 +1596,13 @@ theorem derived_vorticity_to_cluster_bridge
     exact norm_nonneg _
 
   have h_upper : ∀ᶠ (T : ℝ) in atTop, ‖ErrorFunc T‖ ≤ (|κ i j| / (Fintype.card N : ℝ)^2) * (4 * B T * T) := by
-    -- Instruct the filter that T eventually exceeds zero as T → +∞
     filter_upwards [eventually_gt_atTop (0 : ℝ)] with T hT
     have h_cell_bound := h_error_bound T hT
-    -- dsimp reduces real normed norms definitionally to the absolute value block
     dsimp [ErrorFunc] at h_cell_bound ⊢
     exact h_cell_bound
 
   have h_zero : Tendsto (fun _ : ℝ => (0 : ℝ)) atTop (𝓝 0) := tendsto_const_nhds
 
-  -- Apply the explicit filter-bound squeeze cleanly
   exact tendsto_of_tendsto_of_tendsto_of_le_of_le'
     h_zero
     h_limit_ceiling
@@ -1641,33 +1617,22 @@ theorem derived_vorticity_to_cluster_sign_bridge
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (i j : N)
     (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
-    (h_omega : ω i = ω j)
-    -- FIXED: Quantified over an arbitrary noise level B_bound to allow correct substitution downstream
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    (h_primitive_noise : ∀ T : ℝ, ∀ t : ℝ, |ξ t i - ξ t j| ≤ 2 * B T)
-    (h_diff_integrable : ∀ T : ℝ, ∀ t : ℝ, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
-    (h_integrable : ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) volume 0 T)
+    (B : ℝ → ℝ)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
     (h_seed_correspondence : (seed.B_matrix i j : ℝ) = (κ i j * AmplitudeWeight c i j) / (Fintype.card N : ℝ)^2) :
 
     (seed.B_matrix i j > 0 →
       ∀ᶠ T : ℝ in atTop,
-        0 < (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i j T) / (Fintype.card N : ℝ)^2) ∧
+        0 < (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2) ∧
     (seed.B_matrix i j < 0 →
       ∀ᶠ T : ℝ in atTop,
-        (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i j T) / (Fintype.card N : ℝ)^2 < 0) := by
+        (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2 < 0) := by
 
   -- 1. Pull the explicit dynamical convergence limit from previous THEOREM
-  have h_limit : Tendsto (fun (T : ℝ) => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i j T) / (Fintype.card N : ℝ)^2) 
+  have h_limit : Tendsto (fun (T : ℝ) => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2)
     atTop (𝓝 (seed.B_matrix i j : ℝ)) := by
-    exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed i j θ c h_amplitude_i h_amplitude_j
-      h_omega h_spectral_contraction h_init B h_B_nonneg h_flow h_primitive_noise h_diff_integrable h_integrable h_noise_squeeze h_seed_correspondence
+    exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed i j θ c B reg h_noise_squeeze h_seed_correspondence
 
   -- 2. Compose the extracted limit with topological neighborhood sign-preservation filters
   constructor
@@ -1678,35 +1643,15 @@ theorem derived_vorticity_to_cluster_sign_bridge
     have h_neg_real : (seed.B_matrix i j : ℝ) < 0 := by exact_mod_cast h_neg
     exact eventually_neg_sign_preserved_of_tendsto h_limit h_neg_real
 
+
 theorem pmad_uniform_positive_channel_implies_seed_positive
     {N : Type*} [DecidableEq N] [Fintype N]
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ)
     (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (i k : N)
     (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_k : c k = exp (I * (θ k : ℂ)))
-    (h_omega_ik : ω i = ω k)
-    (h_spectral_contraction_ik : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
-    (h_init_ik : ϕ 0 i - ϕ 0 k = θ i - θ k)
     (B : ℝ → ℝ)
-    (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    (h_primitive_noise_ik :
-      ∀ T : ℝ, ∀ t : ℝ,
-
-        |ξ t i - ξ t k| ≤ 2 * B T)
-    (h_diff_integrable_ik :
-      ∀ T : ℝ, ∀ t : ℝ,
-        IntervalIntegrable
-          (fun s => ξ s i - ξ s k) volume 0 t)
-    (h_integrable_ik :
-      ∀ T : ℝ,
-        IntervalIntegrable
-          (fun t =>
-            exp (I * ((ϕ t i : ℂ) - (ϕ t k : ℂ))))
-          volume 0 T)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze :
       Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
     (h_seed_corr_ik :
@@ -1719,70 +1664,37 @@ theorem pmad_uniform_positive_channel_implies_seed_positive
         ε ≤
           (κ i k *
             MacroscopicBornProbability
-              ϕ ω κ ξ (B T) (h_flow T) i k T) /
+              ϕ ω κ ξ (B T) (reg T).h_flow i k T) /
             (Fintype.card N : ℝ)^2) :
     ε ≤ (seed.B_matrix i k : ℝ) := by
 
   have h_limit :=
     derived_vorticity_to_cluster_bridge
-      ϕ ω κ ξ seed i k θ c
-      h_amplitude_i
-      h_amplitude_k
-      h_omega_ik
-      h_spectral_contraction_ik
-      h_init_ik
-      B
-      h_B_nonneg
-      h_flow
-      h_primitive_noise_ik
-      h_diff_integrable_ik
-      h_integrable_ik
-      h_noise_squeeze
-      h_seed_corr_ik
+      ϕ ω κ ξ seed i k θ c B reg h_noise_squeeze h_seed_corr_ik
 
   exact ge_of_tendsto h_limit h_uniform
+
   
 theorem pmad_realizes_local_acyclic_channel
     {N : Type*} [DecidableEq N] [Fintype N]
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (k i j : N) (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
-    (h_amplitude_k : c k = exp (I * (θ k : ℂ)))
-    -- 1. Matched Frequencies across both sub-channels
-    (h_omega_ik : ω i = ω k)
-    (h_omega_kj : ω k = ω j)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))  
-    -- 3. Initial Phase Offset Coordination across both sub-channels
-    (h_init_ik : ϕ 0 i - ϕ 0 k = θ i - θ k)
-    (h_init_kj : ϕ 0 k - ϕ 0 j = θ k - θ j)
     (B : ℝ → ℝ)
-    (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    -- 4. Localized Primitive Noise Invariants across both sub-channels
-    (h_primitive_noise_ik : ∀ T t : ℝ, |ξ t i - ξ t k| ≤ 2 * B T)
-    (h_primitive_noise_kj : ∀ T t : ℝ, |ξ t k - ξ t j| ≤ 2 * B T)
-    -- 5. Localized Difference Integrability across both sub-channels
-    (h_diff_integrable_ik : ∀ T t : ℝ, IntervalIntegrable (fun s => ξ s i - ξ s k) volume 0 t)
-    (h_diff_integrable_kj : ∀ T t : ℝ, IntervalIntegrable (fun s => ξ s k - ξ s j) volume 0 t)
-    -- 6. Localized Path Integrability across both sub-channels
-    (h_integrable_ik : ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t k : ℂ)))) volume 0 T)
-    (h_integrable_kj : ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t k : ℂ) - (ϕ t j : ℂ)))) volume 0 T)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
-    -- 7. Dynamical positivity: each physical channel is eventually bounded below by a fixed strictly positive constant.
+    -- Dynamical positivity: each physical channel is eventually bounded below by a fixed strictly positive constant.
     (h_uniform_ik : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
-      ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i k T) / (Fintype.card N : ℝ)^2)
+      ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i k T) / (Fintype.card N : ℝ)^2)
     (h_uniform_kj : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
-      ε ≤ (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) k j T) / (Fintype.card N : ℝ)^2)
-    -- 8. The Local Acyclicity Condition
+      ε ≤ (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow k j T) / (Fintype.card N : ℝ)^2)
+    -- The Local Acyclicity Condition
     (h_acyclic : IsLocallyAcyclicAt seed k)
-    -- 9. Constitutive Handshake for both active network coordinates
+    -- Constitutive Handshake for both active network coordinates
     (h_seed_corr_ik : (seed.B_matrix i k : ℝ) = (κ i k * AmplitudeWeight c i k) / (Fintype.card N : ℝ)^2)
     (h_seed_corr_kj : (seed.B_matrix k j : ℝ) = (κ k j * AmplitudeWeight c k j) / (Fintype.card N : ℝ)^2) :
     -- Conclusion: the PMAD channels are eventually positive and local acyclicity forces the target cross-entry to be nonnegative.
-    (∀ᶠ T : ℝ in atTop, 0 < (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i k T) / (Fintype.card N : ℝ)^2) ∧
-    (∀ᶠ T : ℝ in atTop, 0 < (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) k j T) / (Fintype.card N : ℝ)^2) ∧
+    (∀ᶠ T : ℝ in atTop, 0 < (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i k T) / (Fintype.card N : ℝ)^2) ∧
+    (∀ᶠ T : ℝ in atTop, 0 < (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow k j T) / (Fintype.card N : ℝ)^2) ∧
     seed.B_matrix i j ≥ 0 := by
   -- 1. Extract the uniform positive lower bounds.
   obtain ⟨ε_ik, hε_ik, h_uniform_ik⟩ := h_uniform_ik
@@ -1790,16 +1702,12 @@ theorem pmad_realizes_local_acyclic_channel
 
   -- 2. Use the PMAD asymptotic bridge to transfer each uniform physical lower bound to the corresponding discrete seed coefficient.
   have h_seed_lower_ik :=
-    pmad_uniform_positive_channel_implies_seed_positive ϕ ω κ ξ seed i k θ c
-      h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_init_ik B
-      h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik
-      h_noise_squeeze h_seed_corr_ik ε_ik h_uniform_ik
+    pmad_uniform_positive_channel_implies_seed_positive ϕ ω κ ξ seed i k θ c B
+      reg h_noise_squeeze h_seed_corr_ik ε_ik h_uniform_ik
 
   have h_seed_lower_kj :=
-    pmad_uniform_positive_channel_implies_seed_positive ϕ ω κ ξ seed k j θ c
-      h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_init_kj B
-      h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj
-      h_noise_squeeze h_seed_corr_kj ε_kj h_uniform_kj
+    pmad_uniform_positive_channel_implies_seed_positive ϕ ω κ ξ seed k j θ c B
+      reg h_noise_squeeze h_seed_corr_kj ε_kj h_uniform_kj
 
   -- 3. Strict positivity of the discrete seed coefficients follows from the positive lower bounds.
   have h_ik_pos_real : 0 < (seed.B_matrix i k : ℝ) := lt_of_lt_of_le hε_ik h_seed_lower_ik
@@ -1810,16 +1718,12 @@ theorem pmad_realizes_local_acyclic_channel
 
   -- 4. Reuse the sign-transport bridges, now with positivity established dynamically rather than assumed.
   have h_bridge_ik :=
-    derived_vorticity_to_cluster_sign_bridge ϕ ω κ ξ seed i k θ c
-      h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_init_ik B
-      h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik
-      h_noise_squeeze h_seed_corr_ik
+    derived_vorticity_to_cluster_sign_bridge ϕ ω κ ξ seed i k θ c B
+      reg h_noise_squeeze h_seed_corr_ik
 
   have h_bridge_kj :=
-    derived_vorticity_to_cluster_sign_bridge ϕ ω κ ξ seed k j θ c
-      h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_init_kj B
-      h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj
-      h_noise_squeeze h_seed_corr_kj
+    derived_vorticity_to_cluster_sign_bridge ϕ ω κ ξ seed k j θ c B
+      reg h_noise_squeeze h_seed_corr_kj
 
   -- 5. Extract eventual positivity of the physical channels.
   have h_eventual_ik := h_bridge_ik.left h_ik_pos
@@ -1829,6 +1733,7 @@ theorem pmad_realizes_local_acyclic_channel
   have h_seed_cross : seed.B_matrix i j ≥ 0 := h_acyclic i j h_ik_pos h_kj_pos
 
   exact ⟨h_eventual_ik, h_eventual_kj, h_seed_cross⟩
+
 
 
 /-- THE DYNAMICAL REALIZATION OF CLUSTER MUTATION SCALE BOUNDS
@@ -1841,80 +1746,41 @@ theorem pmad_realizes_mutation_scale_bound
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (k i j : N)
     (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
-    (h_amplitude_k : c k = exp (I * (θ k : ℂ)))
-    
-    -- 1. Matched Frequencies across both sub-channels
-    (h_omega_ik : ω i = ω k)
-    (h_omega_kj : ω k = ω j)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
-    
-    -- 3. Initial Phase Offset Coordination across both sub-channels
-    (h_init_ik : ϕ 0 i - ϕ 0 k = θ i - θ k)
-    (h_init_kj : ϕ 0 k - ϕ 0 j = θ k - θ j)
-    
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    
-    -- 4. Localized Primitive Noise Invariants across both sub-channels
-    (h_primitive_noise_ik : ∀ T : ℝ, ∀ t : ℝ, |ξ t i - ξ t k| ≤ 2 * B T)
-    (h_primitive_noise_kj : ∀ T : ℝ, ∀ t : ℝ, |ξ t k - ξ t j| ≤ 2 * B T)
-    
-    -- 5. Localized Difference Integrability across both sub-channels
-    (h_diff_integrable_ik : ∀ T : ℝ, ∀ t : ℝ, IntervalIntegrable (fun s => ξ s i - ξ s k) volume 0 t)
-    (h_diff_integrable_kj : ∀ T : ℝ, ∀ t : ℝ, IntervalIntegrable (fun s => ξ s k - ξ s j) volume 0 t)
-    
-    -- 6. Localized Path Integrability across both sub-channels
-    (h_integrable_ik : ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t k : ℂ)))) volume 0 T)
-    (h_integrable_kj : ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t k : ℂ) - (ϕ t j : ℂ)))) volume 0 T)
-    
+    (B : ℝ → ℝ)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
-    (h_uniform_ik : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop, 
-      ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i k T) / (Fintype.card N : ℝ)^2)
-    (h_uniform_kj : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop, 
-      ε ≤ (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) k j T) / (Fintype.card N : ℝ)^2)
-    
+    (h_uniform_ik : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
+      ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i k T) / (Fintype.card N : ℝ)^2)
+    (h_uniform_kj : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
+      ε ≤ (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow k j T) / (Fintype.card N : ℝ)^2)
     -- The Local Acyclicity Condition: The target seed belongs to an acyclic variety class
     (h_acyclic : IsLocallyAcyclicAt seed k)
-    
     -- The Constitutive Handshake for both active network coordinates
     (h_seed_corr_ik : (seed.B_matrix i k : ℝ) = (κ i k * AmplitudeWeight c i k) / (Fintype.card N : ℝ)^2)
     (h_seed_corr_kj : (seed.B_matrix k j : ℝ) = (κ k j * AmplitudeWeight c k j) / (Fintype.card N : ℝ)^2) :
 
     -- Conclusion: PMAD realizes the active channel signs, and the local acyclicity condition yields the MUTATION scale bound.
     (seed.B_matrix i j : ℝ)^2 ≤ ((mutate_seed seed k).B_matrix i j : ℝ)^2 := by
-  
+
   -- 1. Actively call the localized variety realization inside the proof tree.
-  -- FIXED: Replaced legacy h_coupling_cancel parameters with h_spectral_contraction
-  have h_channel_realization := pmad_realizes_local_acyclic_channel 
-    ϕ ω κ ξ seed k i j θ c h_amplitude_i h_amplitude_j h_amplitude_k
-    h_omega_ik h_omega_kj h_spectral_contraction h_init_ik h_init_kj
-    B h_B_nonneg h_flow h_primitive_noise_ik h_primitive_noise_kj h_diff_integrable_ik h_diff_integrable_kj
-    h_integrable_ik h_integrable_kj h_noise_squeeze h_uniform_ik h_uniform_kj h_acyclic h_seed_corr_ik h_seed_corr_kj
+  have h_channel_realization := pmad_realizes_local_acyclic_channel
+    ϕ ω κ ξ seed k i j θ c B reg h_noise_squeeze h_uniform_ik h_uniform_kj h_acyclic h_seed_corr_ik h_seed_corr_kj
 
   -- 2. Extract the non-negative cross-coefficient boundary (seed.B_matrix i j ≥ 0)
   have h_seed_cross := h_channel_realization.right.right
 
   -- Derive strict positivity for the (i, k) network edge from the uniform channel bounds
-  -- FIXED: Replaced legacy h_coupling_cancel_ik with h_spectral_contraction
   have h_ik_pos : seed.B_matrix i k > 0 := by
     obtain ⟨ε, hε, hε_lower⟩ := h_uniform_ik
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
-      ϕ ω κ ξ seed i k θ c h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_init_ik
-      B h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik h_noise_squeeze 
-      h_seed_corr_ik ε hε_lower
+      ϕ ω κ ξ seed i k θ c B reg h_noise_squeeze h_seed_corr_ik ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- Derive strict positivity for the (k, j) network edge from the uniform channel bounds
-  -- FIXED: Replaced legacy h_coupling_cancel_kj with h_spectral_contraction
   have h_kj_pos : seed.B_matrix k j > 0 := by
     obtain ⟨ε, hε, hε_lower⟩ := h_uniform_kj
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
-      ϕ ω κ ξ seed k j θ c h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_init_kj
-      B h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj h_noise_squeeze 
-      h_seed_corr_kj ε hε_lower
+      ϕ ω κ ξ seed k j θ c B reg h_noise_squeeze h_seed_corr_kj ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- 3. Dismiss the double-negative contractive sector using strict positivity tokens
@@ -1924,6 +1790,7 @@ theorem pmad_realizes_mutation_scale_bound
 
   -- 4. Execute the final MUTATION scale bound via combinatorial machinery
   exact cell_mutation_scale_bounds seed k i j h_acyclic h_not_both_neg
+
 
 /-- Pure Algebraic Cluster Matrix Lemma:
     Proves that when the incident exchange arrows passing through vertex k are strictly positive,
@@ -1979,81 +1846,39 @@ theorem pmad_realizes_mutation_increment
     (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N)
     (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
-    (h_amplitude_k : c k = exp (I * (θ k : ℂ)))
-
-    -- Matched Frequencies across both sub-channels
-    (h_omega_ik : ω i = ω k)
-    (h_omega_kj : ω k = ω j)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))  
-
-    -- Initial Phase Offset Coordination across both sub-channels
-    (h_init_ik : ϕ 0 i - ϕ 0 k = θ i - θ k)
-    (h_init_kj : ϕ 0 k - ϕ 0 j = θ k - θ j)
-
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-
-    -- Localized Primitive Noise Invariants across both sub-channels
-    (h_primitive_noise_ik : ∀ T : ℝ, ∀ t : ℝ, |ξ t i - ξ t k| ≤ 2 * B T)
-    (h_primitive_noise_kj : ∀ T : ℝ, ∀ t : ℝ, |ξ t k - ξ t j| ≤ 2 * B T)
-
-    -- Localized Difference Integrability across both sub-channels
-    (h_diff_integrable_ik : ∀ T : ℝ, ∀ t : ℝ, IntervalIntegrable (fun s => ξ s i - ξ s k) volume 0 t)
-    (h_diff_integrable_kj : ∀ T : ℝ, ∀ t : ℝ, IntervalIntegrable (fun s => ξ s k - ξ s j) volume 0 t)
-
-    -- Localized Path Integrability across both sub-channels
-    (h_integrable_ik : ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t k : ℂ)))) volume 0 T)
-    (h_integrable_kj : ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t k : ℂ) - (ϕ t j : ℂ)))) volume 0 T)
-
+    (B : ℝ → ℝ)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
-    (h_uniform_ik : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop, 
-      ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) i k T) / (Fintype.card N : ℝ)^2)
-    (h_uniform_kj : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop, 
-      ε ≤ (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) k j T) / (Fintype.card N : ℝ)^2)
-
-    -- Local acyclicity
+    (h_uniform_ik : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
+      ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i k T) / (Fintype.card N : ℝ)^2)
+    (h_uniform_kj : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
+      ε ≤ (κ k j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow k j T) / (Fintype.card N : ℝ)^2)
     (h_acyclic : IsLocallyAcyclicAt seed k)
-
-    -- Constitutive correspondence for both active network coordinates
     (h_seed_corr_ik : (seed.B_matrix i k : ℝ) = (κ i k * AmplitudeWeight c i k) / (Fintype.card N : ℝ)^2)
     (h_seed_corr_kj : (seed.B_matrix k j : ℝ) = (κ k j * AmplitudeWeight c k j) / (Fintype.card N : ℝ)^2) :
     (seed.B_matrix i j : ℝ) ≤ ((mutate_seed seed k).B_matrix i j : ℝ) := by
 
   -- 1. Realize the two positive PMAD channels and obtain the local-acyclicity consequence B_ij ≥ 0.
-  -- FIXED: Replaced legacy h_coupling_cancel parameters with h_spectral_contraction and
-  have h_channel_realization := pmad_realizes_local_acyclic_channel 
-    ϕ ω κ ξ seed k i j θ c h_amplitude_i h_amplitude_j h_amplitude_k
-    h_omega_ik h_omega_kj h_spectral_contraction h_init_ik h_init_kj
-    B h_B_nonneg h_flow h_primitive_noise_ik h_primitive_noise_kj h_diff_integrable_ik h_diff_integrable_kj
-    h_integrable_ik h_integrable_kj h_noise_squeeze h_uniform_ik h_uniform_kj h_acyclic h_seed_corr_ik h_seed_corr_kj
+  have h_channel_realization := pmad_realizes_local_acyclic_channel
+    ϕ ω κ ξ seed k i j θ c B reg h_noise_squeeze h_uniform_ik h_uniform_kj h_acyclic h_seed_corr_ik h_seed_corr_kj
 
   have h_seed_cross : seed.B_matrix i j ≥ 0 := h_channel_realization.right.right
 
   -- Derive strict positivity for the (i, k) network edge from the uniform channel bounds
-  -- FIXED: Replaced legacy h_coupling_cancel_ik with h_spectral_contraction
   have h_ik_pos : seed.B_matrix i k > 0 := by
     obtain ⟨ε, hε, hε_lower⟩ := h_uniform_ik
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
-      ϕ ω κ ξ seed i k θ c h_amplitude_i h_amplitude_k h_omega_ik h_spectral_contraction h_init_ik
-      B h_B_nonneg h_flow h_primitive_noise_ik h_diff_integrable_ik h_integrable_ik h_noise_squeeze 
-      h_seed_corr_ik ε hε_lower
+      ϕ ω κ ξ seed i k θ c B reg h_noise_squeeze h_seed_corr_ik ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- Derive strict positivity for the (k, j) network edge from the uniform channel bounds
-  -- FIXED: Replaced legacy h_coupling_cancel_kj with h_spectral_contraction
   have h_kj_pos : seed.B_matrix k j > 0 := by
     obtain ⟨ε, hε, hε_lower⟩ := h_uniform_kj
     have h_lower := pmad_uniform_positive_channel_implies_seed_positive
-      ϕ ω κ ξ seed k j θ c h_amplitude_k h_amplitude_j h_omega_kj h_spectral_contraction h_init_kj
-      B h_B_nonneg h_flow h_primitive_noise_kj h_diff_integrable_kj h_integrable_kj h_noise_squeeze 
-      h_seed_corr_kj ε hε_lower
+      ϕ ω κ ξ seed k j θ c B reg h_noise_squeeze h_seed_corr_kj ε hε_lower
     exact_mod_cast lt_of_lt_of_le hε h_lower
 
   -- 2. The positive incident arrows cannot involve the anchor itself.
-  --    If i = k, skew-symmetry forces B_kk = 0, contradicting B_ik > 0.
   have h_i_ne_k : i ≠ k := by
     intro h
     subst i
@@ -2094,6 +1919,7 @@ theorem pmad_realizes_mutation_increment
     linarith
 
   exact h_increment
+
 
 /-- Continuous Single-Step MUTATION Transport Lemma:
     Proves that the real matrix MUTATION map is continuous entrywise. Because it is built
@@ -2244,39 +2070,27 @@ theorem pmad_realizes_eventual_sign_along_path
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (path : List N) (a b : N)
     (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
-    (h_omega_global : ∀ u v : N, ω u = ω v)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) 
-    (h_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    (h_primitive_noise_global : ∀ u v : N, ∀ T t : ℝ, |ξ t u - ξ t v| ≤ 2 * B T)
-    (h_diff_integrable_global : ∀ u v : N, ∀ T t : ℝ, IntervalIntegrable (fun s => ξ s u - ξ s v) volume 0 t)
-    (h_integrable_global : ∀ u v : N, ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t u : ℂ) - (ϕ t v : ℂ)))) volume 0 T)
+    (B : ℝ → ℝ)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
     (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2) :
 
     ((mutate_seed_seq seed path).B_matrix a b > 0 →
-      ∀ᶠ T : ℝ in atTop, 0 < mutate_matrix_real_seq (fun u v => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) u v T) / (Fintype.card N : ℝ)^2) path a b) ∧
+      ∀ᶠ T : ℝ in atTop, 0 < mutate_matrix_real_seq (fun u v => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow u v T) / (Fintype.card N : ℝ)^2) path a b) ∧
     ((mutate_seed_seq seed path).B_matrix a b < 0 →
-      ∀ᶠ T : ℝ in atTop, mutate_matrix_real_seq (fun u v => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) u v T) / (Fintype.card N : ℝ)^2) path a b < 0) := by
+      ∀ᶠ T : ℝ in atTop, mutate_matrix_real_seq (fun u v => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow u v T) / (Fintype.card N : ℝ)^2) path a b < 0) := by
 
   -- 1. Construct the pointwise convergence fact for every node pair (u, v) using core physical bridge
-  have h_vorticity_bridges : ∀ u v : N, Tendsto (fun (T : ℝ) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) u v T) / (Fintype.card N : ℝ)^2) atTop (𝓝 (seed.B_matrix u v : ℝ)) := by
+  have h_vorticity_bridges : ∀ u v : N, Tendsto (fun (T : ℝ) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow u v T) / (Fintype.card N : ℝ)^2) atTop (𝓝 (seed.B_matrix u v : ℝ)) := by
     intro u v
-    -- FIXED: Added parentheses around (h_init_global u v) to prevent argument layout shifting
-    exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed u v θ c 
-      (h_amplitude_global u) (h_amplitude_global v) (h_omega_global u v) 
-      h_spectral_contraction (h_init_global u v) B h_B_nonneg h_flow 
-      (h_primitive_noise_global u v) (h_diff_integrable_global u v) (h_integrable_global u v) 
-      h_noise_squeeze (h_seed_corr_global u v)
+    exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed u v θ c B reg h_noise_squeeze (h_seed_corr_global u v)
 
   -- 2. Construct the local family binding over the raw trajectory current fraction
-  let P_traj := fun (T : ℝ) (u v : N) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) u v T) / (Fintype.card N : ℝ)^2
+  let P_traj := fun (T : ℝ) (u v : N) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow u v T) / (Fintype.card N : ℝ)^2
 
   -- 3. Call the generic, decoupled path-level sign and close the pass natively
   exact eventual_sign_along_path P_traj seed path h_vorticity_bridges a b
+
 
 /-- Continuous C-Matrix Single-Step MUTATION Transport Lemma:
     Proves that the real c-vector MUTATION map is continuous entrywise. Because it is built 
@@ -2502,29 +2316,20 @@ theorem pmad_drives_extended_g_matrix_transport
     (path : List N) (i j : N)
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
-    (h_omega_global : ∀ u v : N, ω u = ω v)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
-    (h_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    (h_primitive_noise_global : ∀ u v : N, ∀ T t : ℝ, |ξ t u - ξ t v| ≤ 2 * B T)
-    (h_diff_integrable_global : ∀ u v : N, ∀ T t : ℝ, IntervalIntegrable (fun s => ξ s u - ξ s v) volume 0 t)
-    (h_integrable_global : ∀ u v : N, ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t u : ℂ) - (ϕ t v : ℂ)))) volume 0 T)
+    (B : ℝ → ℝ)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
     (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2)
     (h_C_convergence : ∀ u v : N, Tendsto (fun T => C_seq T u v) atTop (𝓝 (seed_C u v)))
     (h_G_convergence : ∀ u v : N, Tendsto (fun T => G_seq T u v) atTop (𝓝 (seed_G u v))) :
-    let P_traj := fun (T : ℝ) (u v : N) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) u v T) / (Fintype.card N : ℝ)^2
+    let P_traj := fun (T : ℝ) (u v : N) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow u v T) / (Fintype.card N : ℝ)^2
     let seed_B := fun (u v : N) => (seed.B_matrix u v : ℝ)
-    Tendsto (fun T => mutate_joint_pattern_real_seq seed_B path (P_traj T) (C_seq T) (G_seq T) i j) 
+    Tendsto (fun T => mutate_joint_pattern_real_seq seed_B path (P_traj T) (C_seq T) (G_seq T) i j)
       atTop (𝓝 (mutate_joint_pattern_real_seq seed_B path seed_B seed_C seed_G i j)) := by
   intro P_traj seed_B
   have h_vorticity_bridges : ∀ u v : N, Tendsto (fun T => P_traj T u v) atTop (𝓝 (seed_B u v)) := by
     intro u v
-    -- FIXED: Added parentheses around (h_init_global u v) to maintain uniform argument tracking
-    exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed u v θ c (h_amplitude_global u) (h_amplitude_global v) (h_omega_global u v) h_spectral_contraction (h_init_global u v) B h_B_nonneg h_flow (h_primitive_noise_global u v) (h_diff_integrable_global u v) (h_integrable_global u v) h_noise_squeeze (h_seed_corr_global u v)
+    exact derived_vorticity_to_cluster_bridge ϕ ω κ ξ seed u v θ c B reg h_noise_squeeze (h_seed_corr_global u v)
   exact extended_g_matrix_seq_limit_transport P_traj C_seq G_seq seed_B seed_C seed_G path h_vorticity_bridges h_C_convergence h_G_convergence i j
 
 /-- Propositional Equivalence Bridge for Tier 3:
@@ -2551,36 +2356,27 @@ theorem pmad_realizes_exchange_graph_morphism
     (path : List N) (i j : N)
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
-    (h_omega_global : ∀ u v : N, ω u = ω v)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
-    (h_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    (h_primitive_noise_global : ∀ u v : N, ∀ T t : ℝ, |ξ t u - ξ t v| ≤ 2 * B T)
-    (h_diff_integrable_global : ∀ u v : N, ∀ T t : ℝ, IntervalIntegrable (fun s => ξ s u - ξ s v) volume 0 t)
-    (h_integrable_global : ∀ u v : N, ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t u : ℂ) - (ϕ t v : ℂ)))) volume 0 T)
+    (B : ℝ → ℝ)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
     (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2)
     (h_C_convergence : ∀ u v : N, Tendsto (fun T => C_seq T u v) atTop (𝓝 (seed_C u v)))
     (h_G_convergence : ∀ u v : N, Tendsto (fun T => G_seq T u v) atTop (𝓝 (seed_G u v))) :
-    let P_traj := fun (T : ℝ) (u v : N) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) u v T) / (Fintype.card N : ℝ)^2
+    let P_traj := fun (T : ℝ) (u v : N) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow u v T) / (Fintype.card N : ℝ)^2
     let seed_B := fun (u v : N) => (seed.B_matrix u v : ℝ)
     let terminal_chart := evaluate_chart_path seed_B (VarietyChart.mk seed_B seed_C seed_G) path
     Tendsto (fun T => (evaluate_chart_path seed_B (physicalChartFamily P_traj C_seq G_seq T) path).G i j)
       atTop (𝓝 (terminal_chart.G i j)) := by
   intro P_traj seed_B terminal_chart
-  have h_chart_unfold : ∀ T, (evaluate_chart_path seed_B (physicalChartFamily P_traj C_seq G_seq T) path).G i j = 
-    (evaluate_chart_path seed_B (VarietyChart.mk (P_traj T) (C_seq T) (G_seq T)) path).G i j := by 
+  have h_chart_unfold : ∀ T, (evaluate_chart_path seed_B (physicalChartFamily P_traj C_seq G_seq T) path).G i j =
+    (evaluate_chart_path seed_B (VarietyChart.mk (P_traj T) (C_seq T) (G_seq T)) path).G i j := by
       intro T; rfl
   simp_rw [h_chart_unfold, evaluate_chart_path_eq_mutate_joint_seq]
   dsimp [terminal_chart]
   rw [evaluate_chart_path_eq_mutate_joint_seq]
   exact pmad_drives_extended_g_matrix_transport C_seq G_seq seed_C seed_G path i j
-    ϕ ω κ ξ seed θ c h_amplitude_global h_omega_global h_spectral_contraction h_init_global 
-    B h_B_nonneg h_flow h_primitive_noise_global h_diff_integrable_global h_integrable_global 
-    h_noise_squeeze h_seed_corr_global h_C_convergence h_G_convergence
+    ϕ ω κ ξ seed θ c B reg h_noise_squeeze h_seed_corr_global h_C_convergence h_G_convergence
+
   
 /-- Comprehensive Variety Chart Pointwise Invariance Lemma:
     Rigorously establishes by list induction that updating a baseline variety chart 
@@ -2611,7 +2407,6 @@ theorem quasienergy_sideband_invariance_under_mutation
       (evaluate_chart_path seed_B (evaluate_chart_path seed_B (VarietyChart.mk seed_B seed_C seed_G) path1) path2).G i j := by
   dsimp [variety_invariant]
   rw [evaluate_chart_path_generalized]
-
   
 theorem pmad_morphism_respects_path_concatenation
     {N : Type*} [DecidableEq N] [Fintype N]
@@ -2619,43 +2414,31 @@ theorem pmad_morphism_respects_path_concatenation
     (path1 path2 : List N) (i j : N)
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (seed : ClusterSeed N) (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_global : ∀ u : N, c u = exp (I * (θ u : ℂ)))
-    (h_omega_global : ∀ u v : N, ω u = ω v)
-    (h_spectral_contraction : ∀ (B_bound : ℝ) (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B_bound → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))   
-    (h_init_global : ∀ u v : N, ϕ 0 u - ϕ 0 v = θ u - θ v)
-    (B : ℝ → ℝ) (h_B_nonneg : ∀ T : ℝ, 0 ≤ B T)
-    (h_flow : ∀ T : ℝ, IsPmadFlow ϕ ω κ ξ (B T))
-    (h_primitive_noise_global : ∀ u v : N, ∀ T t : ℝ, |ξ t u - ξ t v| ≤ 2 * B T)
-    (h_diff_integrable_global : ∀ u v : N, ∀ T t : ℝ, IntervalIntegrable (fun s => ξ s u - ξ s v) volume 0 t)
-    (h_integrable_global : ∀ u v : N, ∀ T : ℝ, IntervalIntegrable (fun t => exp (I * ((ϕ t u : ℂ) - (ϕ t v : ℂ)))) volume 0 T)
+    (B : ℝ → ℝ)
+    (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
     (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2)
     (h_C_convergence : ∀ u v : N, Tendsto (fun T => C_seq T u v) atTop (𝓝 (seed_C u v)))
     (h_G_convergence : ∀ u v : N, Tendsto (fun T => G_seq T u v) atTop (𝓝 (seed_G u v))) :
-
-    let P_traj := fun (T : ℝ) (u v : N) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (h_flow T) u v T) / (Fintype.card N : ℝ)^2
+    let P_traj := fun (T : ℝ) (u v : N) => (κ u v * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow u v T) / (Fintype.card N : ℝ)^2
     let seed_B := fun (u v : N) => (seed.B_matrix u v : ℝ)
-    
     Tendsto (fun T => (evaluate_chart_path seed_B (physicalChartFamily P_traj C_seq G_seq T) (path1 ++ path2)).G i j)
       atTop (𝓝 (variety_invariant seed_B seed_C seed_G (path1 ++ path2) i j)) := by
   intro P_traj seed_B
-  
+
   -- Step 1: Pass only the streamlined algebraic matrix bindings to match the clean signature
   rw [quasienergy_sideband_invariance_under_mutation seed_B seed_C seed_G path1 path2 i j]
-        
+
   -- Step 2: Use the generalized path in the FORWARD direction on the goal
   rw [evaluate_chart_path_generalized]
-  
+
   -- Step 3: Instantiate the core physical realization
   have h_phys := pmad_realizes_exchange_graph_morphism C_seq G_seq seed_C seed_G (path1 ++ path2) i j
-    ϕ ω κ ξ seed θ c h_amplitude_global h_omega_global h_spectral_contraction h_init_global 
-    B h_B_nonneg h_flow h_primitive_noise_global h_diff_integrable_global h_integrable_global 
-    h_noise_squeeze h_seed_corr_global h_C_convergence h_G_convergence
-    
+    ϕ ω κ ξ seed θ c B reg h_noise_squeeze h_seed_corr_global h_C_convergence h_G_convergence
+
   -- Step 4: Clean up the local let bindings so definitions unify perfectly
   dsimp only [seed_B]
-  
+
   -- Step 5: Exact match verifies the unified target
   exact h_phys
 
@@ -2678,7 +2461,6 @@ theorem macro_current_invariant_under_mutation
   rw [open List in append_nil] at h_split
   exact h_split
 
-
 /-- Macro-Observable Attractor Recurrent Intersection Theorem:
     Rigorously establishes that MUTATION equivalence induces an asymptotic coalescence 
     in the macro-observable trajectories under the PMAD attractor basin.
@@ -2687,57 +2469,40 @@ theorem macro_current_invariant_under_mutation
 theorem mutation_attractor_recurrent_intersection
     {N : Type*} [DecidableEq N] [Fintype N]
     (G_seq1 G_seq2 : ℝ → N → N → ℝ) (seed_G : N → N → ℝ)
-    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
-    (μ_spectrum : N → ℝ) (Ω : ℝ → ℝ) (Ω_min : ℝ) (hΩ_min : 0 ≤ Ω_min)
-    (h_rg_flow : ∀ t, Ω_min ≤ Ω t) (g : Matrix N N ℝ)
-    (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N) (r : ℝ) (R_ϕ : ℝ) (hR_ϕ_nonneg : 0 ≤ R_ϕ)
-    (h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ) (δ : ℝ) (hδ_pos : 0 < δ)
-    (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ t)^2) (T : ℝ) (hT : 0 < T)
-    (B : ℝ) (h_B : 0 ≤ B)
-    (h_flow1 : IsPmadFlow ϕ ω κ ξ B)
-    (h_arnold_tongue : IsInArnoldTongue ω κ ξ B ϕ h_flow1 T)
-    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
-    (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) - 
-      (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤ 
-      (Fintype.card N : ℝ)^2 * (4 * B * T))
+    (μ_spectrum : N → ℝ) (Ω : ℝ → ℝ) (Ω_min : ℝ)
+    (g : Matrix N N ℝ) (r R_ϕ δ T : ℝ)
+    (reg : NoisyCensorshipRegime ω κ ξ B ϕ PhaseVorticityTensor μ_spectrum Ω Ω_min g r R_ϕ δ T)
     (h_G1_convergence : ∀ u v, Tendsto (fun T => G_seq1 T u v) atTop (𝓝 (seed_G u v)))
     (h_G2_convergence : ∀ u v, Tendsto (fun T => G_seq2 T u v) atTop (𝓝 (seed_G u v))) :
     AsymptoticGIntersection G_seq1 G_seq2 := by
-  
-  -- Step 1: Instantiate the microscale censorship limit envelope
-  have h_censorship := pmad_micro_censorship_alltime_noisy ω κ ξ B h_B ϕ h_flow1
-    PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow g h_substrate r R_ϕ hR_ϕ_nonneg 
-    h_phi_bound δ hδ_pos h_order_bound T hT h_arnold_tongue h_vorticity_equilibrium h_emergence_envelope
-    
-  rcases h_censorship with ⟨B_val, _h_bounded_metric⟩
-  
+
+  -- Step 1: Instantiate the microscale censorship limit envelope via `NoisyCensorshipRegime`
+  obtain ⟨B_val, _h_bounded_metric⟩ := pmad_micro_censorship_of_regime reg
+
   -- Step 2: Initialize synchronized subharmonic clock sequences
   let τ_seq := fun (n : ℕ) => (n : ℝ)
-  have h_clocks_at_top : Tendsto τ_seq atTop atTop := by
-    exact tendsto_natCast_atTop_atTop
-    
+  have h_clocks_at_top : Tendsto τ_seq atTop atTop :=
+    tendsto_natCast_atTop_atTop
+
   unfold AsymptoticGIntersection
   use τ_seq, τ_seq
   refine ⟨h_clocks_at_top, h_clocks_at_top, ?_⟩
-  
+
   intro u_idx v_idx
-  
+
   -- Step 3: Compute functional limit convergence mappings over the dynamic coordinates
-  have h_G1_lim : Tendsto (fun n => G_seq1 (τ_seq n) u_idx v_idx) atTop (𝓝 (seed_G u_idx v_idx)) := by
-    exact Tendsto.comp (h_G1_convergence u_idx v_idx) h_clocks_at_top
-    
-  have h_G2_lim : Tendsto (fun n => G_seq2 (τ_seq n) u_idx v_idx) atTop (𝓝 (seed_G u_idx v_idx)) := by
-    exact Tendsto.comp (h_G2_convergence u_idx v_idx) h_clocks_at_top
-    
+  have h_G1_lim : Tendsto (fun n => G_seq1 (τ_seq n) u_idx v_idx) atTop (𝓝 (seed_G u_idx v_idx)) :=
+    Tendsto.comp (h_G1_convergence u_idx v_idx) h_clocks_at_top
+
+  have h_G2_lim : Tendsto (fun n => G_seq2 (τ_seq n) u_idx v_idx) atTop (𝓝 (seed_G u_idx v_idx)) :=
+    Tendsto.comp (h_G2_convergence u_idx v_idx) h_clocks_at_top
+
   -- Step 4: Coalescence Handshake - The subtraction limit targets exactly 𝓝 0
-  have h_diff_lim : Tendsto (fun n => G_seq1 (τ_seq n) u_idx v_idx - G_seq2 (τ_seq n) u_idx v_idx) atTop (𝓝 0) := by
-    have h_sub := Tendsto.sub h_G1_lim h_G2_lim
-    rw [sub_self (seed_G u_idx v_idx)] at h_sub
-    exact h_sub
-    
-  exact h_diff_lim
+  have h_sub := Tendsto.sub h_G1_lim h_G2_lim
+  rwa [sub_self (seed_G u_idx v_idx)] at h_sub
+
 
 /-- PHASE 3: CONNECTED COMPONENT ISOMORPHISM (THE SUFFICIENT CONDITION)
     Formalizes the ultimate sufficient condition threshold of Problem 2.8.2.
@@ -2750,52 +2515,38 @@ theorem mutation_attractor_recurrent_intersection
 theorem variety_invariant_is_sufficient_classification
     {N : Type*} [DecidableEq N] [Fintype N] (B1 B2 : N → N → ℝ)
     (G_seq1 G_seq2 : ℝ → N → N → ℝ) (seed_C seed_G : N → N → ℝ) (path : List N) (i j : N)
-    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
     (seed : ClusterSeed N)
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
-    (μ_spectrum : N → ℝ) (Ω : ℝ → ℝ) (Ω_min : ℝ) (hΩ_min : 0 ≤ Ω_min)
-    (h_rg_flow : ∀ t, Ω_min ≤ Ω t) (g : Matrix N N ℝ)
-    (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N) (r : ℝ) (R_ϕ : ℝ) (hR_ϕ_nonneg : 0 ≤ R_ϕ)
-    (h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ) (δ : ℝ) (hδ_pos : 0 < δ)
-    (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ t)^2) (T : ℝ) (hT : 0 < T)
-    (B : ℝ) (h_B : 0 ≤ B)
-    (h_flow1 : IsPmadFlow ϕ ω κ ξ B)
-    (h_arnold_tongue : IsInArnoldTongue ω κ ξ B ϕ h_flow1 T)
-    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow1 i j T‖) / (Fintype.card N : ℝ)^2)
-    (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) - 
-      (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤ 
-      (Fintype.card N : ℝ)^2 * (4 * B * T))
+    (μ_spectrum : N → ℝ) (Ω : ℝ → ℝ) (Ω_min : ℝ)
+    (g : Matrix N N ℝ) (r R_ϕ δ T : ℝ)
+    (reg : NoisyCensorshipRegime ω κ ξ B ϕ PhaseVorticityTensor μ_spectrum Ω Ω_min g r R_ϕ δ T)
     (h_G1_convergence : ∀ u v, Tendsto (fun T => G_seq1 T u v) atTop (𝓝 (seed_G u v)))
     (h_G2_convergence : ∀ u v, Tendsto (fun T => G_seq2 T u v) atTop (𝓝 (seed_G u v)))
     (h_eq : RealMutationEquivalent B1 B2) :
-    
-    (variety_invariant B1 seed_C seed_G path i j = variety_invariant B2 seed_C seed_G path i j) → 
+
+    (variety_invariant B1 seed_C seed_G path i j = variety_invariant B2 seed_C seed_G path i j) →
     RealMutationEquivalent B1 B2 := by
   intro h_invariant_match
-  
-  -- Step 1: Call the subharmonic trajectory intersection property natively
+
+  -- Step 1: Call the subharmonic trajectory intersection property via `NoisyCensorshipRegime`
   have h_asymptotic := mutation_attractor_recurrent_intersection G_seq1 G_seq2 seed_G
-    ϕ ω κ ξ PhaseVorticityTensor μ_spectrum Ω Ω_min hΩ_min h_rg_flow g h_substrate r R_ϕ hR_ϕ_nonneg 
-    h_phi_bound δ hδ_pos h_order_bound T hT B h_B h_flow1 
-    h_arnold_tongue h_vorticity_equilibrium h_emergence_envelope
-    h_G1_convergence h_G2_convergence
+    ϕ ω κ ξ B PhaseVorticityTensor μ_spectrum Ω Ω_min g r R_ϕ δ T
+    reg h_G1_convergence h_G2_convergence
 
   -- Step 2: Instantiate verified Phase 2 transport over the macro invariant channel
-  -- Cleaned up to match the pure algebraic footprint of the updated macro current
   let seed_B := fun (u v : N) => (seed.B_matrix u v : ℝ)
   have h_step_inv := macro_current_invariant_under_mutation seed_B seed_C seed_G path i j
-    
+
   -- Step 3: The Completeness Bridge Pass
   rcases h_asymptotic with ⟨τ₁, τ₂, h_clock1, h_clocks2, h_subharmonic_coalescence⟩
-  
+
   have h_transport_at_clock := h_step_inv
-  
-  -- Unroll the nested local binders from h_step_inv definitionally
+
   change (evaluate_chart_path (fun u v => ↑(seed.B_matrix u v))
     { B := mutate_matrix_real_seq (fun u v => ↑(seed.B_matrix u v)) path,
       C := fun u v => (evaluate_chart_path (fun u v => ↑(seed.B_matrix u v)) { B := fun u v => ↑(seed.B_matrix u v), C := seed_C, G := seed_G } path).C u v,
-      G := fun u v => (evaluate_chart_path (fun u v => ↑(seed.B_matrix u v)) { B := fun u v => ↑(seed.B_matrix u v), C := seed_C, G := seed_G } path).G u v } []).G i j = 
+      G := fun u v => (evaluate_chart_path (fun u v => ↑(seed.B_matrix u v)) { B := fun u v => ↑(seed.B_matrix u v), C := seed_C, G := seed_G } path).G u v } []).G i j =
     variety_invariant (fun u v => ↑(seed.B_matrix u v)) seed_C seed_G path i j at h_transport_at_clock
 
   -- Step 4: The Triality Isomorphism Bridge
