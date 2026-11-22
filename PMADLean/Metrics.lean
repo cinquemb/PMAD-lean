@@ -50,6 +50,36 @@ noncomputable def LocalPhaseVorticityTensor (κ : N → N → ℝ) (ϕ : Traject
 noncomputable def ComplianceFloor (α : ℝ) (θ : ℝ) : ℝ :=
   α * (Real.cos θ / Real.sin θ)
 
+/-- Euclidean inner product on `N → ℝ` for measuring principal angles between CLV subbundles. -/
+def phaseInnerProduct (u v : N → ℝ) : ℝ :=
+  ∑ i : N, u i * v i
+
+/-- Euclidean norm on `N → ℝ`. -/
+noncomputable def phaseNorm (u : N → ℝ) : ℝ :=
+  Real.sqrt (phaseInnerProduct u u)
+
+open Classical in
+/-- Section XII-I & XII-S: Subspace Hyper-Angle `θ_CLV(t)` between the stable (`E_s t`)
+and unstable (`E_u t`) CLV bundles of a `CovariantTangentSplitting`.
+Defined via `arccos` of the supremum normalized inner product `|⟨u, v⟩| / (‖u‖ ‖v‖)`
+over nonzero vectors `u ∈ E_s t`, `v ∈ E_u t` (defaulting to `π / 2` when `E_u t = ⊥`
+or `E_s t = ⊥`, i.e., orthogonal / purely contractive splitting). -/
+noncomputable def SubspaceHyperAngle
+    {κ : N → N → ℝ} {ϕ : Trajectory N} {lambda_s : ℝ}
+    (split : CovariantTangentSplitting κ ϕ lambda_s) (t : ℝ) : ℝ :=
+  let ratios : Set ℝ :=
+    { r | ∃ u ∈ split.E_s t, ∃ v ∈ split.E_u t,
+      u ≠ 0 ∧ v ≠ 0 ∧ r = |phaseInnerProduct u v| / (phaseNorm u * phaseNorm v) }
+  if ratios.Nonempty then Real.arccos (sSup ratios) else Real.pi / 2
+
+/-- Endogenized Compliance Floor `ε(t) = α cot θ_CLV(t)` driven directly by the
+`CovariantTangentSplitting` from `Dynamics.lean` rather than a free scalar `θ`. -/
+noncomputable def CLVComplianceFloor
+    {κ : N → N → ℝ} {ϕ : Trajectory N} {lambda_s : ℝ}
+    (α : ℝ) (split : CovariantTangentSplitting κ ϕ lambda_s) (t : ℝ) : ℝ :=
+  ComplianceFloor α (SubspaceHyperAngle split t)
+
+
 /-- Section T-4: Macro-Statistical Metric Trace Density.
     Computes the network-normalized average trace compliance footprint, 
     preventing state blowup in dense network assemblies. -/
@@ -299,6 +329,91 @@ theorem compliance_floor_divergence_bounds (α : ℝ) (hα : 0 < α) (M : ℝ) (
   -- 3. Convert to fractional division form cleanly using the provided domain positivity
   rw [le_div_iff₀ h_sin_pos]
   linarith
+  
+/-- Proves that along
+the homogeneous synchronization gauge orbit (`E_u = ⊥`), the CLV subspace hyper-angle is
+orthogonal (`θ_CLV = π / 2`) and the endogenous `CLVComplianceFloor` vanishes (`ε = 0`). -/
+theorem uniform_kuramoto_clv_orthogonal_compliance
+    [Nonempty N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B K lambda_phys α : ℝ)
+    (hK : 0 < K)
+    (h_uniform_κ : ∀ i j, κ i j = K / (Fintype.card N : ℝ))
+    (ϕ : Trajectory N)
+    (h_flow : IsPmadFlow ϕ ω κ ξ B)
+    (h_dissipative : ∀ t ≥ 0, ∀ (i j : N),
+      let Δ := ϕ t i - ϕ t j
+      let Δ_dot := (ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
+                   (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j)
+      Δ * Δ_dot ≤ lambda_phys * Δ ^ 2)
+    (h_init_sync : ∀ i j, ϕ 0 i = ϕ 0 j)
+    (t : ℝ) :
+    let split := uniform_kuramoto_tangent_splitting ω κ ξ B K lambda_phys hK h_uniform_κ ϕ h_flow h_dissipative h_init_sync
+    SubspaceHyperAngle split t = Real.pi / 2 ∧
+    CLVComplianceFloor α split t = 0 := by
+  intro split
+  have h_empty : ¬ { r : ℝ | ∃ u ∈ split.E_s t, ∃ v ∈ split.E_u t,
+      u ≠ 0 ∧ v ≠ 0 ∧ r = |phaseInnerProduct u v| / (phaseNorm u * phaseNorm v) }.Nonempty := by
+    rintro ⟨r, u, _, v, hv_mem, _, hv_ne, _⟩
+    change v ∈ (⊥ : Submodule ℝ (N → ℝ)) at hv_mem
+    simp only [Submodule.mem_bot] at hv_mem
+    exact hv_ne hv_mem
+  have h_angle : SubspaceHyperAngle split t = Real.pi / 2 := by
+    unfold SubspaceHyperAngle
+    exact if_neg h_empty
+  refine ⟨h_angle, ?_⟩
+  unfold CLVComplianceFloor ComplianceFloor
+  rw [h_angle, Real.cos_pi_div_two, zero_div, mul_zero]
+
+/-- Positivity of the CLV Compliance Floor under Non-Orthogonal Subbundle Shear:
+Whenever `α > 0` and the CLV hyper-angle `θ_CLV = SubspaceHyperAngle split t` lies in the
+sheared regime `(0, π / 2)`, the endogenous compliance floor `ε = CLVComplianceFloor α split t`
+is strictly positive (`ε > 0`), discharging the regularization hypothesis of
+`EmergentComplianceMetric`. -/
+theorem clv_compliance_floor_pos
+    {κ : N → N → ℝ} {ϕ : Trajectory N} {lambda_s : ℝ}
+    (α : ℝ) (hα : 0 < α)
+    (split : CovariantTangentSplitting κ ϕ lambda_s) (t : ℝ)
+    (h_pos : 0 < SubspaceHyperAngle split t)
+    (h_lt : SubspaceHyperAngle split t < Real.pi / 2) :
+    0 < CLVComplianceFloor α split t := by
+  unfold CLVComplianceFloor ComplianceFloor
+  have h_cos : 0 < Real.cos (SubspaceHyperAngle split t) :=
+    Real.cos_pos_of_mem_Ioo ⟨by linarith, h_lt⟩
+  have h_sin : 0 < Real.sin (SubspaceHyperAngle split t) :=
+    Real.sin_pos_of_pos_of_lt_pi h_pos (by linarith [Real.pi_pos])
+  exact mul_pos hα (div_pos h_cos h_sin)
+
+/-- Dynamics-to-Metrics Bridge (`TimeAveragedStiffnessMatrix` ⟶ `EmergentComplianceMetric`):
+Proves that for a diagonal normal-mode stiffness profile `κ = diagonal d` (`d i ≥ 0`) over
+any positive observation horizon `T > 0`, `TimeAveragedStiffnessMatrix (diagonal d) ϕ T`
+reduces identically to `diagonal d`, and when regularized by the endogenous `CLVComplianceFloor`
+of a sheared `CovariantTangentSplitting`, every diagonal component of `EmergentComplianceMetric`
+is strictly bounded above by `(CLVComplianceFloor α split t)⁻¹`. -/
+theorem clv_regularized_stiffness_diagonal_bound
+    {κ_bg : N → N → ℝ} {ϕ_bg : Trajectory N} {lambda_s : ℝ}
+    (α : ℝ) (hα : 0 < α)
+    (split : CovariantTangentSplitting κ_bg ϕ_bg lambda_s) (t_split : ℝ)
+    (h_pos : 0 < SubspaceHyperAngle split t_split)
+    (h_lt : SubspaceHyperAngle split t_split < Real.pi / 2)
+    (d : N → ℝ) (hd : ∀ i, 0 ≤ d i)
+    (ϕ : Trajectory N) (T : ℝ) (hT : 0 < T) :
+    let ε := CLVComplianceFloor α split t_split
+    let h_ε := clv_compliance_floor_pos α hα split t_split h_pos h_lt
+    let C := TimeAveragedStiffnessMatrix (diagonal d) ϕ T
+    ∀ i, (EmergentComplianceMetric C ε h_ε) i i ≤ ε⁻¹ := by
+  intro ε h_ε C i
+  have hC_eq : C = diagonal d := by
+    ext a b
+    unfold C TimeAveragedStiffnessMatrix
+    by_cases hab : a = b
+    · subst hab
+      simp only [diagonal_apply_eq, sub_self, Real.cos_zero, intervalIntegral.integral_const,
+        sub_zero, smul_eq_mul, mul_one]
+      rw [one_div_mul_cancel (ne_of_gt hT), mul_one]
+    · simp only [diagonal_apply_ne _ hab, zero_mul]
+  rw [hC_eq]
+  exact compliance_metric_diagonal_bound ε h_ε d hd i
+
 
 omit [DecidableEq N] [Fintype N] in
 /-- Coordinate independence via index permutation.

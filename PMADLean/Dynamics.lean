@@ -163,7 +163,7 @@ def mutate_seed (seed : ClusterSeed N) (k : N) : ClusterSeed N where
 
 /-- Evaluates a Laurent polynomial phase shield envelope 
     by coupling the metric coordinate `x` to a continuous, non-linear norm weight 
-    that smoothly scales between 0 and 1 based on the polynomial's structure. -/
+    that smoothly scales between 0 and 1 based on the polynomial's STRUCTURE. -/
 noncomputable def laurent_space_eval (P : LaurentPolynomial ℝ) (x : ℝ) : ℝ :=
   -- Retrieve the constant term coefficient value directly using native .coeff notation
   let p_coeff := |P.coeff 0|
@@ -232,6 +232,155 @@ def IsKuramotoSyncFlow (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → �
                  (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j)
     Δ * Δ_dot ≤ lambda_phys * Δ ^ 2)
 
+/-- Section XIV-G (Eqs. 75–76): Instantaneous Kuramoto Jacobian `J_{ij}(ϕ, t) = ∂ϕ̇_i / ∂ϕ_j`.
+Off-diagonal entries measure pairwise phase susceptibility `κ i j * cos(ϕ t j - ϕ t i)`,
+while diagonal entries enforce row-sum conservation `- ∑ k ≠ i, κ i k * cos(ϕ t k - ϕ t i)`. -/
+noncomputable def KuramotoJacobian
+    (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ) : Matrix N N ℝ :=
+  fun i j =>
+    if i = j then
+      - ∑ k ∈ Finset.univ.erase i, κ i k * Real.cos (ϕ t k - ϕ t i)
+    else
+      κ i j * Real.cos (ϕ t j - ϕ t i)
+
+/-- Section XII-K (Eq. 25) & Section XIV-G (Eq. 77):
+Time-Averaged Phase Stiffness Matrix `C_{ij} = κ_{ij} ⟨cos(ϕ_j - ϕ_i)⟩_T`
+evaluated over the finite observation horizon `[0, T]`. -/
+noncomputable def TimeAveragedStiffnessMatrix
+    (κ : N → N → ℝ) (ϕ : Trajectory N) (T : ℝ) : Matrix N N ℝ :=
+  fun i j =>
+    κ i j * ((1 / T) * ∫ t in (0)..T, Real.cos (ϕ t j - ϕ t i))
+
+/-- Variational Tangent Flow (Linearized Cocycle):
+A tangent trajectory `v : ℝ → (N → ℝ)` solves the linearized phase equations
+`v̇_i(t) = ∑ j, J_{ij}(ϕ, t) * v_j(t)` along the base trajectory `ϕ`. -/
+def IsVariationalSolution
+    (κ : N → N → ℝ) (ϕ : Trajectory N) (v : ℝ → (N → ℝ)) : Prop :=
+  ∀ t ≥ 0, ∀ (i : N),
+    HasDerivAt (fun t' => v t' i) (∑ j : N, KuramotoJacobian κ ϕ t i j * v t j) t
+
+/-- Step 1a: The `(N - 1)`-dimensional transverse stable subspace `E^s`
+consisting of zero-sum tangent vectors `{ v : N → ℝ | ∑ i, v i = 0 }`. -/
+def stableSubspace (N : Type*) [Fintype N] : Submodule ℝ (N → ℝ) where
+  carrier := { v | ∑ i : N, v i = 0 }
+  zero_mem' := by simp
+  add_mem' {u v} hu hv := by
+    simp only [Set.mem_ofPred_eq, Pi.add_apply] at hu hv ⊢
+    rw [Finset.sum_add_distrib, hu, hv, add_zero]
+  smul_mem' c {v} hv := by
+    simp only [Set.mem_ofPred_eq, Pi.smul_apply, smul_eq_mul] at hv ⊢
+    rw [← Finset.mul_sum, hv, mul_zero]
+
+/-- Step 1b: The 1-dimensional neutral center subspace `E^c` tangent to `A_gauge_orbit`,
+spanned by the uniform phase-shift vector `fun _ => 1`. -/
+def neutralSubspace (N : Type*) : Submodule ℝ (N → ℝ) :=
+  Submodule.span ℝ {fun _ : N => (1 : ℝ)}
+
+/-- Step 1c: The trivial unstable subspace `E^u = ⊥` on a stable synchronization attractor. -/
+def unstableSubspace (N : Type*) : Submodule ℝ (N → ℝ) := ⊥
+
+/-- Section XII-I, XII-J, & XII-S: Covariant Lyapunov Vector (CLV) Tangent Splitting.
+Formalizes the time-dependent tangent-space decomposition `T_{ϕ(t)} M = E^s(t) ⊕ E^u(t) ⊕ E^c(t)`
+governed by the variational cocycle along `ϕ`, tracking:
+1. Transverse independence (`Disjoint`) of the stable, unstable, and neutral subspaces,
+2. Forward covariance (invariance) of each subbundle under `IsVariationalSolution`, and
+3. Exponential contraction along `E^s` at rate `lambda_s ≤ 0` (matching `kuramoto_gronwall_contraction`). -/
+structure CovariantTangentSplitting
+    (κ : N → N → ℝ) (ϕ : Trajectory N) (lambda_s : ℝ) : Type _ where
+  /-- Contractive stable CLV bundle `E^s(t)` -/
+  E_s : ℝ → Submodule ℝ (N → ℝ)
+  /-- Expansive unstable CLV bundle `E^u(t)` -/
+  E_u : ℝ → Submodule ℝ (N → ℝ)
+  /-- Neutral / gauge-orbit tangent bundle `E^c(t)` -/
+  E_c : ℝ → Submodule ℝ (N → ℝ)
+  /-- Negative-definite stability rate along `E^s` -/
+  h_lambda_neg : lambda_s ≤ 0
+  /-- Direct-sum independence: stable and unstable subspaces intersect only at zero -/
+  stable_unstable_disjoint : ∀ t, Disjoint (E_s t) (E_u t)
+  /-- Forward covariance of `E^s` under the variational flow -/
+  stable_invariant : ∀ v, IsVariationalSolution κ ϕ v → v 0 ∈ E_s 0 → ∀ t ≥ 0, v t ∈ E_s t
+  /-- Forward covariance of `E^u` under the variational flow -/
+  unstable_invariant : ∀ v, IsVariationalSolution κ ϕ v → v 0 ∈ E_u 0 → ∀ t ≥ 0, v t ∈ E_u t
+  /-- Forward covariance of `E^c` under the variational flow -/
+  neutral_invariant : ∀ v, IsVariationalSolution κ ϕ v → v 0 ∈ E_c 0 → ∀ t ≥ 0, v t ∈ E_c t
+  /-- Exponential contraction of squared Euclidean norm along `E^s` -/
+  stable_contract : ∀ v, IsVariationalSolution κ ϕ v → v 0 ∈ E_s 0 →
+    ∀ t ≥ 0, (∑ i : N, (v t i) ^ 2) ≤ (∑ i : N, (v 0 i) ^ 2) * Real.exp (2 * lambda_s * t)
+
+/-- On the synchronization gauge orbit (`∀ i j, ϕ t i = ϕ t j`), all cosine factors
+evaluate to `1`, reducing `KuramotoJacobian` to the constant graph Laplacian
+and placing the uniform phase-shift direction `fun _ => 1` in its kernel. -/
+lemma kuramoto_jacobian_on_gauge_orbit
+    (κ : N → N → ℝ) (ϕ : Trajectory N) (t : ℝ)
+    (h_sync : ∀ i j, ϕ t i = ϕ t j) :
+    (∀ i j, KuramotoJacobian κ ϕ t i j =
+      if i = j then - ∑ k ∈ Finset.univ.erase i, κ i k else κ i j) ∧
+    (∀ i, ∑ j : N, KuramotoJacobian κ ϕ t i j * (1 : ℝ) = 0) := by
+  have h_entry : ∀ i j, KuramotoJacobian κ ϕ t i j =
+      if i = j then - ∑ k ∈ Finset.univ.erase i, κ i k else κ i j := by
+    intro i j
+    unfold KuramotoJacobian
+    by_cases h_ij : i = j
+    · rw [if_pos h_ij, if_pos h_ij]
+      congr 1
+      apply Finset.sum_congr rfl
+      intro k _
+      rw [h_sync k i, sub_self, Real.cos_zero, mul_one]
+    · rw [if_neg h_ij, if_neg h_ij]
+      rw [h_sync j i, sub_self, Real.cos_zero, mul_one]
+  refine ⟨h_entry, ?_⟩
+  intro i
+  simp_rw [h_entry, mul_one]
+  rw [← Finset.add_sum_erase Finset.univ _ (Finset.mem_univ i)]
+  rw [if_pos rfl]
+  have h_off : ∑ x ∈ Finset.univ.erase i, (if i = x then -∑ k ∈ Finset.univ.erase i, κ i k else κ i x) =
+      ∑ x ∈ Finset.univ.erase i, κ i x := by
+    apply Finset.sum_congr rfl
+    intro x hx
+    rw [if_neg (Ne.symm (Finset.ne_of_mem_erase hx))]
+  rw [h_off]
+  ring
+
+/-- For uniform all-to-all coupling `κ i j = K / |N|` on the synchronization gauge orbit,
+every transverse tangent vector `v` with `∑ j, v j = 0` is an exact eigenvector of
+`KuramotoJacobian` with eigenvalue `-K`. -/
+lemma uniform_jacobian_zero_sum_eigenvalue
+    [Nonempty N] (κ : N → N → ℝ) (K : ℝ)
+    (h_uniform_κ : ∀ i j, κ i j = K / (Fintype.card N : ℝ))
+    (ϕ : Trajectory N) (t : ℝ) (h_sync : ∀ i j, ϕ t i = ϕ t j)
+    (v : N → ℝ) (h_zero_sum : ∑ j : N, v j = 0) (i : N) :
+    ∑ j : N, KuramotoJacobian κ ϕ t i j * v j = -K * v i := by
+  have h_entry := (kuramoto_jacobian_on_gauge_orbit κ ϕ t h_sync).1
+  set cardN : ℝ := (Fintype.card N : ℝ)
+  have h_card_pos : 0 < cardN := Nat.cast_pos.mpr Fintype.card_pos
+  have h_card_ne : cardN ≠ 0 := ne_of_gt h_card_pos
+  -- 1. Split the row sum into the diagonal term `j = i` and off-diagonal terms `j ∈ univ.erase i`
+  rw [← Finset.add_sum_erase Finset.univ _ (Finset.mem_univ i)]
+  -- 2. Evaluate the diagonal term `j = i`
+  have h_diag : KuramotoJacobian κ ϕ t i i * v i =
+      -((cardN - 1) * (K / cardN)) * v i := by
+    rw [h_entry i i, if_pos rfl]
+    simp_rw [h_uniform_κ]
+    rw [Finset.sum_const, Finset.card_erase_of_mem (Finset.mem_univ i),
+        Finset.card_univ, nsmul_eq_mul, Nat.cast_sub Fintype.card_pos, Nat.cast_one]
+  -- 3. Evaluate the off-diagonal sum `j ≠ i`
+  have h_off : ∑ j ∈ Finset.univ.erase i, KuramotoJacobian κ ϕ t i j * v j =
+      (K / cardN) * (-v i) := by
+    have h_rewrite : ∑ j ∈ Finset.univ.erase i, KuramotoJacobian κ ϕ t i j * v j =
+        ∑ j ∈ Finset.univ.erase i, (K / cardN) * v j := by
+      apply Finset.sum_congr rfl
+      intro j hj
+      rw [h_entry i j, if_neg (Ne.symm (Finset.ne_of_mem_erase hj)), h_uniform_κ i j]
+    rw [h_rewrite, ← Finset.mul_sum]
+    have h_erase_sum : ∑ j ∈ Finset.univ.erase i, v j = -v i := by
+      have h_split := Finset.add_sum_erase Finset.univ v (Finset.mem_univ i)
+      linarith
+    rw [h_erase_sum]
+  -- 4. Combine diagonal and off-diagonal contributions and simplify `(cardN - 1 + 1) / cardN = 1`
+  rw [h_diag, h_off]
+  field_simp [h_card_ne]
+  ring
+
 /-- 1. Finite-Time Grönwall Contraction via Lyapunov Integrating Factor.
 If Δ(s) is differentiable on [0, t] and satisfies Δ(s) * Δ'(s) ≤ lambda * Δ(s)^2,
 then V(s) = Δ(s)^2 * exp(-2 * lambda * s) is non-increasing on [0, t]. -/
@@ -281,10 +430,176 @@ theorem kuramoto_gronwall_contraction
       rw [h_cancel, Real.exp_zero, mul_one]
     _ = ((Δ t) ^ 2 * Real.exp (-2 * lambda * t)) * Real.exp (2 * lambda * t) := by ring
     _ ≤ (Δ 0) ^ 2 * Real.exp (2 * lambda * t) := h_mul
+    
+/-- Sum conservation along variational solutions for symmetric uniform Kuramoto flows.
+Because every column of `KuramotoJacobian` on `A_gauge_orbit` sums to zero (`∑ i, J_{ij} = 0`),
+the total coordinate sum `S(t) = ∑ i, v t i` has zero time derivative and stays constant for `t ≥ 0`. -/
+lemma uniform_variational_sum_conserved
+    (κ : N → N → ℝ) (K : ℝ)
+    (h_uniform_κ : ∀ i j, κ i j = K / (Fintype.card N : ℝ))
+    (ϕ : Trajectory N) (h_sync : ∀ t ≥ 0, ∀ i j, ϕ t i = ϕ t j)
+    (v : ℝ → (N → ℝ)) (hv : IsVariationalSolution κ ϕ v) (t : ℝ) (ht : 0 ≤ t) :
+    ∑ i : N, v t i = ∑ i : N, v 0 i := by
+  let S : ℝ → ℝ := fun s => ∑ i : N, v s i
+  have hS_deriv : ∀ s ≥ (0 : ℝ), HasDerivAt S 0 s := by
+    intro s hs
+    have h_sum_deriv : HasDerivAt (fun t' => ∑ i ∈ Finset.univ, v t' i)
+        (∑ i ∈ Finset.univ, ∑ j : N, KuramotoJacobian κ ϕ s i j * v s j) s :=
+      HasDerivAt.fun_sum (fun i _ => hv s hs i)
+    have h_zero : (∑ i : N, ∑ j : N, KuramotoJacobian κ ϕ s i j * v s j) = 0 := by
+      rw [Finset.sum_comm]
+      apply Finset.sum_eq_zero
+      intro j _
+      rw [← Finset.sum_mul]
+      have h_symm : ∀ a b, KuramotoJacobian κ ϕ s a b = KuramotoJacobian κ ϕ s b a := by
+        intro a b
+        have h_entry := (kuramoto_jacobian_on_gauge_orbit κ ϕ s (h_sync s hs)).1
+        rw [h_entry a b, h_entry b a]
+        by_cases hab : a = b
+        · subst hab; rfl
+        · rw [if_neg hab, if_neg (Ne.symm hab), h_uniform_κ a b, h_uniform_κ b a]
+      have h_col_zero : ∑ i : N, KuramotoJacobian κ ϕ s i j = 0 := by
+        simp_rw [h_symm]
+        have h_row := (kuramoto_jacobian_on_gauge_orbit κ ϕ s (h_sync s hs)).2 j
+        simpa [mul_one] using h_row
+      rw [h_col_zero, zero_mul]
+    simpa [S, h_zero] using h_sum_deriv
+  have h_gronwall := kuramoto_gronwall_contraction (fun s => S s - S 0) (fun _ => 0) 0 t ht
+    (fun s hs => (hS_deriv s hs.1).sub_const (S 0))
+    (fun s _ => by simp)
+  have h_sq_le : (S t - S 0) ^ 2 ≤ 0 := by
+    simpa only [sub_self, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_mul] using h_gronwall
+  exact sub_eq_zero.mp (sq_eq_zero_iff.mp (le_antisymm h_sq_le (sq_nonneg (S t - S 0))))
 
 
+/-- Exponential Euclidean norm contraction along the zero-sum subspace `E^s`.
+Combines `uniform_variational_sum_conserved`, `uniform_jacobian_zero_sum_eigenvalue`,
+and `kuramoto_gronwall_contraction` component-by-component. -/
+lemma uniform_variational_zero_sum_contraction
+    [Nonempty N] (κ : N → N → ℝ) (K : ℝ)
+    (h_uniform_κ : ∀ i j, κ i j = K / (Fintype.card N : ℝ))
+    (ϕ : Trajectory N) (h_sync : ∀ t ≥ 0, ∀ i j, ϕ t i = ϕ t j)
+    (v : ℝ → (N → ℝ)) (hv : IsVariationalSolution κ ϕ v)
+    (h_zero_sum : ∑ i : N, v 0 i = 0) (t : ℝ) (ht : 0 ≤ t) :
+    (∑ i : N, (v t i) ^ 2) ≤ (∑ i : N, (v 0 i) ^ 2) * Real.exp (2 * (-K) * t) := by
+  have h_comp : ∀ i : N, (v t i) ^ 2 ≤ (v 0 i) ^ 2 * Real.exp (2 * (-K) * t) := by
+    intro i
+    apply kuramoto_gronwall_contraction (fun s => v s i) (fun s => -K * v s i) (-K) t ht
+    · intro s hs
+      have h_eq : ∑ j : N, KuramotoJacobian κ ϕ s i j * v s j = -K * v s i := by
+        apply uniform_jacobian_zero_sum_eigenvalue κ K h_uniform_κ ϕ s (h_sync s hs.1) (v s)
+        rw [uniform_variational_sum_conserved κ K h_uniform_κ ϕ h_sync v hv s hs.1, h_zero_sum]
+      exact h_eq ▸ hv s hs.1 i
+    · intro s _
+      have h_mul : v s i * (-K * v s i) = (-K) * (v s i) ^ 2 := by ring
+      exact le_of_eq h_mul
+  calc
+    ∑ i : N, (v t i) ^ 2 ≤ ∑ i : N, ((v 0 i) ^ 2 * Real.exp (2 * (-K) * t)) :=
+      Finset.sum_le_sum (fun i _ => h_comp i)
+    _ = (∑ i : N, (v 0 i) ^ 2) * Real.exp (2 * (-K) * t) := by
+      rw [← Finset.sum_mul]
 
-/-- 2. Kuramoto Detuning Threshold → Spectral Contraction Bridge.
+
+/-- Master Covariant Tangent Splitting Theorem for Uniform Kuramoto PMAD Flows.
+Connects `IsPmadFlow` trajectories on the synchronization gauge orbit `A_gauge_orbit`
+to an explicit `CovariantTangentSplitting κ ϕ (-K)` bundle witness (`E^s`, `E^u`, `E^c`),
+discharging invariance and exponential contraction via `kuramoto_gronwall_contraction`. -/
+noncomputable def uniform_kuramoto_tangent_splitting
+    [Nonempty N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B K lambda_phys : ℝ)
+    (hK : 0 < K)
+    (h_uniform_κ : ∀ i j, κ i j = K / (Fintype.card N : ℝ))
+    (ϕ : Trajectory N)
+    (h_flow : IsPmadFlow ϕ ω κ ξ B)
+    (h_dissipative : ∀ t ≥ 0, ∀ (i j : N),
+      let Δ := ϕ t i - ϕ t j
+      let Δ_dot := (ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
+                   (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j)
+      Δ * Δ_dot ≤ lambda_phys * Δ ^ 2)
+    (h_init_sync : ∀ i j, ϕ 0 i = ϕ 0 j) :
+    CovariantTangentSplitting κ ϕ (-K) :=
+  have h_sync : ∀ t ≥ 0, ∀ i j, ϕ t i = ϕ t j := by
+    intro t ht i j
+    let Δ : ℝ → ℝ := fun s => ϕ s i - ϕ s j
+    let Δ' : ℝ → ℝ := fun s =>
+      (ω i + ∑ k, κ i k * Real.sin (ϕ s k - ϕ s i) + ξ s i) -
+      (ω j + ∑ k, κ j k * Real.sin (ϕ s k - ϕ s j) + ξ s j)
+    have h_sq := kuramoto_gronwall_contraction Δ Δ' lambda_phys t ht
+      (fun s _ => (h_flow.2 s i).sub (h_flow.2 s j))
+      (fun s hs => h_dissipative s hs.1 i j)
+    have h0 : Δ 0 = 0 := sub_eq_zero.mpr (h_init_sync i j)
+    rw [h0] at h_sq
+    simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_mul] at h_sq
+    exact sub_eq_zero.mp (sq_eq_zero_iff.mp (le_antisymm h_sq (sq_nonneg (Δ t))))
+  { E_s := fun _ => stableSubspace N
+    E_u := fun _ => unstableSubspace N
+    E_c := fun _ => neutralSubspace N
+    h_lambda_neg := by linarith
+    stable_unstable_disjoint := fun _ => disjoint_bot_right
+    stable_invariant := by
+      intro v hv hv0 t ht
+      change ∑ i : N, v t i = 0
+      change ∑ i : N, v 0 i = 0 at hv0
+      rw [uniform_variational_sum_conserved κ K h_uniform_κ ϕ h_sync v hv t ht, hv0]
+    unstable_invariant := by
+      intro v hv hv0 t ht
+      change v 0 = 0 at hv0
+      change v t = 0
+      have h0_sum : ∑ i : N, v 0 i = 0 := by simp [hv0]
+      have h_norm := uniform_variational_zero_sum_contraction κ K h_uniform_κ ϕ h_sync v hv h0_sum t ht
+      have h_zero_norm : ∑ j : N, (v t j) ^ 2 ≤ 0 := by
+        simpa [hv0] using h_norm
+      ext i
+      have h_term_le : (v t i) ^ 2 ≤ 0 := by
+        have h_single : (v t i) ^ 2 ≤ ∑ j : N, (v t j) ^ 2 :=
+          Finset.single_le_sum (fun j _ => sq_nonneg (v t j)) (Finset.mem_univ i)
+        linarith
+      exact sq_eq_zero_iff.mp (le_antisymm h_term_le (sq_nonneg (v t i)))
+    neutral_invariant := by
+      intro v hv hv0 t ht
+      rw [neutralSubspace, Submodule.mem_span_singleton] at hv0 ⊢
+      rcases hv0 with ⟨c, hc⟩
+      refine ⟨c, ?_⟩
+      let w : ℝ → (N → ℝ) := fun s i => v s i - c
+      have hw_var : IsVariationalSolution κ ϕ w := by
+        intro s hs i
+        have h_kern : ∑ j : N, KuramotoJacobian κ ϕ s i j * w s j =
+            ∑ j : N, KuramotoJacobian κ ϕ s i j * v s j := by
+          have h_sub : ∑ j : N, KuramotoJacobian κ ϕ s i j * (v s j - c) =
+              (∑ j : N, KuramotoJacobian κ ϕ s i j * v s j) -
+              c * (∑ j : N, KuramotoJacobian κ ϕ s i j * (1 : ℝ)) := by
+            simp_rw [mul_sub, Finset.sum_sub_distrib, mul_one, Finset.mul_sum]
+            congr 1
+            apply Finset.sum_congr rfl
+            intro j _
+            ring
+          rw [h_sub, (kuramoto_jacobian_on_gauge_orbit κ ϕ s (h_sync s hs)).2 i, mul_zero, sub_zero]
+        exact h_kern ▸ (hv s hs i).sub_const c
+      have hw0 : w 0 = 0 := by
+        ext i
+        dsimp [w]
+        have hi := congrFun hc i
+        simp only [Pi.smul_apply, smul_eq_mul, mul_one] at hi
+        linarith
+      have hw0_sum : ∑ i : N, w 0 i = 0 := by simp [hw0]
+      have h_norm := uniform_variational_zero_sum_contraction κ K h_uniform_κ ϕ h_sync w hw_var hw0_sum t ht
+      have h_zero_norm : ∑ j : N, (w t j) ^ 2 ≤ 0 := by
+        simpa [hw0] using h_norm
+      ext i
+      have h_term_le : (w t i) ^ 2 ≤ 0 := by
+        have h_single : (w t i) ^ 2 ≤ ∑ j : N, (w t j) ^ 2 :=
+          Finset.single_le_sum (fun j _ => sq_nonneg (w t j)) (Finset.mem_univ i)
+        linarith
+      have hwi_zero : v t i - c = 0 := sq_eq_zero_iff.mp (le_antisymm h_term_le (sq_nonneg (w t i)))
+      simp only [Pi.smul_apply, smul_eq_mul, mul_one]
+      linarith
+    stable_contract := by
+      intro v hv hv0 t ht
+      exact uniform_variational_zero_sum_contraction κ K h_uniform_κ ϕ h_sync v hv hv0 t ht }
+
+
+omit [DecidableEq N] in
+/-- Kuramoto Detuning Threshold → Spectral Contraction Bridge.
 Under a detuning + noise threshold condition ensuring effective dissipation at rate
 `lambda_phys ≤ 0`, any PMAD trajectory initialized inside the synchronization tube
 `|ϕ 0 i - ϕ 0 j| < 1` contracts exponentially for all `lambda_bound ∈ [lambda_phys, 0]`. -/
@@ -333,7 +648,8 @@ theorem kuramoto_detuning_spectral_contraction
   rw [← sq_abs (Δ t)] at h_strict_sq
   nlinarith [abs_nonneg (Δ t)]
 
-/-- 3. Kuramoto Attractor Convergence from Detuning Threshold.
+omit [DecidableEq N] in
+/-- Kuramoto Attractor Convergence from Detuning Threshold.
 Proves convergence to the synchronization manifold `A_gauge_orbit` for all decay rates
 `lambda_bound ∈ [lambda_phys, 0]` governed by the Kuramoto detuning threshold. -/
 theorem kuramoto_flow_converges_to_attractor
@@ -394,6 +710,7 @@ theorem kuramoto_flow_converges_to_attractor
       ϕ' h_is_flow h_init_basin (h_detuning_threshold ϕ' h_is_flow)
       t ht lambda_bound h_ge_phys h_le_zero i j
 
+omit [DecidableEq N] in
 /-- Hypothesis-Free Kuramoto Basin Convergence:
 Every PMAD trajectory initialized in `|ϕ 0 i - ϕ 0 j| < 1` that satisfies the
 pairwise Kuramoto detuning dissipation inequality converges to the synchronization
@@ -515,6 +832,56 @@ lemma jordan_ineq_nonneg (x : ℝ) (hx0 : 0 ≤ x) (hx_pi : x ≤ Real.pi / 2) :
     ring
   linarith
 
+omit [DecidableEq N] in
+/-- Forward Invariance of `A_gauge_orbit` via Grönwall Contraction:
+Proves using `kuramoto_gronwall_contraction` that any `IsPmadFlow` trajectory
+satisfying the pairwise dissipation condition and initialized on `A_gauge_orbit`
+(`∀ i j, ϕ 0 i = ϕ 0 j`) remains on `A_gauge_orbit` for all `t ≥ 0`. -/
+theorem kuramoto_gauge_orbit_forward_invariant
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B lambda_phys : ℝ)
+    (ϕ : Trajectory N)
+    (h_flow : IsPmadFlow ϕ ω κ ξ B)
+    (h_dissipative : ∀ t ≥ 0, ∀ (i j : N),
+      let Δ := ϕ t i - ϕ t j
+      let Δ_dot := (ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
+                   (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j)
+      Δ * Δ_dot ≤ lambda_phys * Δ ^ 2)
+    (h_init_sync : ∀ i j, ϕ 0 i = ϕ 0 j) :
+    ∀ t ≥ 0, ∀ i j, ϕ t i = ϕ t j := by
+  intro t ht i j
+  let Δ : ℝ → ℝ := fun s => ϕ s i - ϕ s j
+  let Δ' : ℝ → ℝ := fun s =>
+    (ω i + ∑ k, κ i k * Real.sin (ϕ s k - ϕ s i) + ξ s i) -
+    (ω j + ∑ k, κ j k * Real.sin (ϕ s k - ϕ s j) + ξ s j)
+  have h_sq := kuramoto_gronwall_contraction Δ Δ' lambda_phys t ht
+    (fun s _ => (h_flow.2 s i).sub (h_flow.2 s j))
+    (fun s hs => h_dissipative s hs.1 i j)
+  have h0 : Δ 0 = 0 := sub_eq_zero.mpr (h_init_sync i j)
+  rw [h0] at h_sq
+  simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_mul] at h_sq
+  exact sub_eq_zero.mp (sq_eq_zero_iff.mp (le_antisymm h_sq (sq_nonneg (Δ t))))
+
+
+/-- Bridge Connecting Existing Attractor Convergence to CLV Tangent Splitting:
+Proves forward-invariance of `A_gauge_orbit` under `IsKuramotoSyncFlow` using
+`kuramoto_gronwall_contraction` and establishes existence of a `CovariantTangentSplitting`. -/
+theorem kuramoto_attractor_carries_clv_splitting
+    [Nonempty N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B K lambda_phys : ℝ)
+    (hK : 0 < K)
+    (h_uniform_κ : ∀ i j, κ i j = K / (Fintype.card N : ℝ))
+    (ϕ : Trajectory N)
+    (h_sync_flow : IsKuramotoSyncFlow ϕ ω κ ξ B lambda_phys)
+    (h_on_orbit_0 : ∀ i j, ϕ 0 i = ϕ 0 j) :
+    (∀ t ≥ 0, ∀ i j, ϕ t i = ϕ t j) ∧
+    Nonempty (CovariantTangentSplitting κ ϕ (-K)) := by
+  have h_inv : ∀ t ≥ 0, ∀ i j, ϕ t i = ϕ t j :=
+    kuramoto_gauge_orbit_forward_invariant ω κ ξ B lambda_phys ϕ
+      h_sync_flow.1 (fun s _ i j => h_sync_flow.2.2 s i j) h_on_orbit_0
+  exact ⟨h_inv, ⟨uniform_kuramoto_tangent_splitting ω κ ξ B K lambda_phys hK h_uniform_κ ϕ
+    h_sync_flow.1 (fun s _ i j => h_sync_flow.2.2 s i j) h_on_orbit_0⟩⟩
+
+
 /-- Signed Jordan Inequality:
 For any angle `θ` with `|θ| ≤ π / 2`, the signed product `θ * sin θ` is lower-bounded
 by `(2 / π) * θ ^ 2`. -/
@@ -542,7 +909,7 @@ lemma jordan_signed_mul_sin (θ : ℝ) (hθ : |θ| ≤ Real.pi / 2) :
       _ = θ * Real.sin θ := by ring
 
 
-
+omit [DecidableEq N] in
 /-- Uniform Kuramoto Detuning & Noise → Pairwise Dissipation Bridge:
 For uniform all-to-all coupling `κ i j = K / Fintype.card N` (`K > 0`) inside a phase cone
 of diameter `r₀ ≤ π`, whenever the restoring force `(2 / π) * K * cos (r₀ / 2)` exceeds
@@ -682,6 +1049,7 @@ theorem uniform_kuramoto_detuning_to_dissipation
   rw [h_decomp]
   linarith
 
+omit [DecidableEq N] in
 /-- Resonant Kuramoto Detuning & Noise → Pairwise Dissipation Bridge (Axiom A4):
 Extends `uniform_kuramoto_detuning_to_dissipation` to non-uniform resonant networks
 `κ i j = (K / Fintype.card N) * R i j` governed by `UbiquitousResonance N R` (`0 < R i j ≤ 1`)
@@ -796,7 +1164,7 @@ theorem resonant_kuramoto_detuning_to_dissipation
     ϕ t h_cone i j
     (by simp)
   dsimp only at h_core
-  simp only [zero_sub, add_zero, zero_add] at h_core
+  simp only [add_zero, zero_add] at h_core
   -- 5. Combine `h_tot_pert_mul`, `h_core`, and `h_margin`
   have h_decomp :
       Δ * ((ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
@@ -908,7 +1276,62 @@ theorem pmad_flow_converges_to_attractor
     (fun ϕ => IsPmadFlow ϕ ω κ ξ B)
     (fun lambda_bound => lambda_bound ≤ 0)
     h_spectral_contraction
+    
+/-- Direct CLV Tangent Splitting from `pmad_flow_converges_to_attractor`'s Spectral Contraction:
+Shows that the exact `h_spectral_contraction` hypothesis of `pmad_flow_converges_to_attractor`
+forces every `IsPmadFlow` trajectory onto `A_gauge_orbit` (`∀ t ≥ 0, ϕ t i = ϕ t j`) and
+constructs a `CovariantTangentSplitting κ ϕ (-K)` alongside `pmad_flow_converges_to_attractor`. -/
+theorem pmad_flow_attractor_and_clv_splitting
+    [Nonempty N]
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B K : ℝ)
+    (hK : 0 < K)
+    (h_uniform_κ : ∀ i j, κ i j = K / (Fintype.card N : ℝ))
+    (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
+      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
+    (∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ),
+      AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound) ∧
+    (∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
+      Nonempty (CovariantTangentSplitting κ ϕ (-K))) := by
+  refine ⟨pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction, ?_⟩
+  intro ϕ h_flow
+  -- 1. Prove ϕ t i = ϕ t j for all t > 0 by choosing lambda_bound = log(ε) / t
+  have h_pos_sync : ∀ t > 0, ∀ i j, ϕ t i = ϕ t j := by
+    intro t ht i j
+    have h_le_zero : ∀ ε > 0, |ϕ t i - ϕ t j| ≤ ε := by
+      intro ε hε
+      by_cases hε1 : ε ≤ 1
+      · have h_lam : Real.log ε / t ≤ 0 :=
+          div_nonpos_of_nonpos_of_nonneg (Real.log_nonpos (le_of_lt hε) hε1) (le_of_lt ht)
+        have h_lt := h_spectral_contraction ϕ h_flow t ht (Real.log ε / t) h_lam i j
+        rw [div_mul_cancel₀ _ (ne_of_gt ht), Real.exp_log hε] at h_lt
+        exact le_of_lt h_lt
+      · push Not at hε1
+        have h_lt := h_spectral_contraction ϕ h_flow t ht 0 (le_refl 0) i j
+        simp only [zero_mul, Real.exp_zero] at h_lt
+        linarith
+    have h_abs_zero : |ϕ t i - ϕ t j| = 0 :=
+      le_antisymm (le_of_forall_pos_le_add (fun ε hε => by simpa using h_le_zero ε hε)) (abs_nonneg _)
+    exact sub_eq_zero.mp (abs_eq_zero.mp h_abs_zero)
+  -- 2. Extend to t = 0 by continuity of ϕ · i - ϕ · j at 0
+  have h_all_sync : ∀ t ≥ 0, ∀ i j, ϕ t i = ϕ t j := by
+    intro t ht i j
+    rcases eq_or_lt_of_le ht with rfl | h_pos
+    · have h_cont : Continuous (fun s => ϕ s i - ϕ s j) :=
+        continuous_iff_continuousAt.mpr (fun s => ((h_flow.2 s i).continuousAt).sub ((h_flow.2 s j).continuousAt))
+      have h_tendsto : Filter.Tendsto (fun s => ϕ s i - ϕ s j) (nhdsWithin 0 (Set.Ioi 0)) (nhds (ϕ 0 i - ϕ 0 j)) :=
+        h_cont.continuousAt.tendsto.mono_left nhdsWithin_le_nhds
+      have h_zero_tendsto : Filter.Tendsto (fun _ : ℝ => (0 : ℝ)) (nhdsWithin 0 (Set.Ioi 0)) (nhds (ϕ 0 i - ϕ 0 j)) :=
+        h_tendsto.congr' (Filter.eventuallyEq_of_mem self_mem_nhdsWithin (fun s hs => sub_eq_zero.mpr (h_pos_sync s hs i j)))
+      exact sub_eq_zero.mp (tendsto_nhds_unique h_zero_tendsto tendsto_const_nhds)
+    · exact h_pos_sync t h_pos i j
+  -- 3. Apply kuramoto_attractor_carries_clv_splitting via uniform dissipation on A_gauge_orbit
+  exact ⟨uniform_kuramoto_tangent_splitting ω κ ξ B K 0 hK h_uniform_κ ϕ h_flow
+    (fun s hs i j => by
+      have h_eq : ϕ s i - ϕ s j = 0 := sub_eq_zero.mpr (h_all_sync s hs i j)
+      simp [h_eq])
+    (fun i j => h_all_sync 0 (le_refl 0) i j)⟩
 
+omit [DecidableEq N] in
 /-- Master Hypothesis-Free Kuramoto Attractor Theorem:
 Proves synchronization attractor convergence directly from uniform all-to-all coupling `K > 0`,
 cone diameter `r₀ ≤ π / 2`, and the Kuramoto detuning/noise margin—completely discharging
@@ -945,7 +1368,8 @@ theorem uniform_kuramoto_converges_to_attractor
           ϕ' s (h_cone s) a b (h_margin s a b))
         t ht lambda_bound h_ge_phys h_le_zero i j)
   exact ⟨A, fun lambda_bound h_ge h_le => hA lambda_bound ⟨h_ge, h_le⟩⟩
-  
+
+omit [DecidableEq N] in
 /-- Master Hypothesis-Free Resonant Kuramoto Attractor Theorem (Axiom A4):
 Proves synchronization attractor convergence directly for non-uniform resonant networks
 `κ i j = (K / Fintype.card N) * R i j` governed by `UbiquitousResonance N R` (`0 < R i j ≤ 1`)
@@ -987,7 +1411,7 @@ theorem resonant_kuramoto_converges_to_attractor
         t ht lambda_bound h_ge_phys h_le_zero i j)
   exact ⟨A, fun lambda_bound h_ge h_le => hA lambda_bound ⟨h_ge, h_le⟩⟩
 
-
+omit [DecidableEq N] in
 /-- Relation Theorem: Resonant Strong-Coupling / Adiabatic Limit Bridge (Axiom A4).
 Derives `h_spectral_contraction` from weighted resonant Kuramoto coupling
 `κ i j = (K / Fintype.card N) * R i j` (`UbiquitousResonance N R`) in the strong-coupling
