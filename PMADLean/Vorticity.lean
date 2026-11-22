@@ -368,7 +368,7 @@ noncomputable def variety_invariant {N : Type*} [DecidableEq N] [Fintype N]
 /-- Bundled Noisy Microscale Censorship Regime:
 Consolidates the RG scale flow, substrate capacity, phase-order lower bound,
 Arnold-tongue trapping, and emergence envelope hypotheses into a single reusable
-record for `pmad_micro_censorship_alltime_noisy` and its cluster-variety consumers. -/
+record for `pmad_micro_censorship_of_regime` and its cluster-variety consumers. -/
 structure NoisyCensorshipRegime
     {N : Type*} [DecidableEq N] [Fintype N]
     (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B_noise : ℝ)
@@ -859,87 +859,65 @@ omit [DecidableEq N] in
     Chains `born_rule_noise_degradation_bound_derive_ftc_evolution` directly into the complex norm space,
     proving that dynamic noise degradation remains trapped under perfect locking. -/
 theorem complex_norm_error_bound_single_slot
-    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ) (h_B : 0 ≤ B)
-    (h_flow : IsPmadFlow ϕ ω κ ξ B)
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
     (i j : N) (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
-    (h_omega : ω i = ω j)
-    (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
-    (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
-    (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
-    (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
+    (reg : ResonantPhaseRegime ϕ ω κ ξ B c θ)
     (T : ℝ) (hT : 0 < T)
-    (h_integrable : IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) volume 0 T)
     -- The State-Space Locking Premise: The historical integral has settled into its real steady state
-    (h_imag_locked : (PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j).im = 0) :
+    (h_imag_locked : (PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j).im = 0) :
 
-    ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖ ≤ B * T := by
+    ‖PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)‖ ≤ B * T := by
 
   -- Step 1: Call `born_rule_noise_degradation_bound_derive_ftc_evolution` to extract the real pointwise error boundary
   have h_real_physics := born_rule_noise_degradation_bound_derive_ftc_evolution
-    ϕ ω κ ξ B h_B h_flow i j θ c h_amplitude_i h_amplitude_j h_omega h_spectral_contraction
-    h_primitive_noise h_init h_diff_integrable T hT h_integrable
+    ϕ ω κ ξ B reg.h_B reg.h_flow i j θ c (reg.h_amplitude i) (reg.h_amplitude j) (reg.h_omega i j)
+    reg.h_spectral_contraction (fun t => pmad_flow_noise_diff_bound reg.h_flow t i j)
+    (reg.h_init i j) (fun t => reg.h_diff_integrable t i j) T hT
+    (pmad_flow_overlap_intervalIntegrable reg.h_flow i j T)
 
   -- Step 2: Unfold the definition of MacroscopicBornProbability to align syntax layouts
-  have h_syntax_align : |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| =
+  have h_syntax_align : |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| =
 
-                        |(PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)).re| := by
+                        |(PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)).re| := by
     unfold MacroscopicBornProbability
     rw [Complex.sub_re, Complex.ofReal_re]
     
   rw [h_syntax_align] at h_real_physics
 
   -- Step 3: Invoke Bridge LEMMA 2 to lift the real boundary into the complex absolute norm
-  have h_lift := complex_norm_from_real_bound 
-    (PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)) 
+  exact complex_norm_from_real_bound 
+    (PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)) 
     (B * T) 
     h_real_physics 
     h_imag_locked
-
-  exact h_lift
 
 omit [DecidableEq N] in
 /-- SYNTHESIS THEOREM 2: Matrix-Wide Complex Absolute Norm Error Boundaries.
     Injects the single-slot complex norm physics bound into the grid aggregator,
     lifting the error constraint over the total network double summation. -/
 theorem complex_norm_error_bound_matrix_grid
-    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ) (h_B : 0 ≤ B)
-    (h_flow : IsPmadFlow ϕ ω κ ξ B)
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
     (θ : N → ℝ) (c : N → ℂ)
-    (h_amplitude_i : ∀ i, c i = exp (I * (θ i : ℂ)))
-    (h_amplitude_j : ∀ j, c j = exp (I * (θ j : ℂ)))
-    (h_omega : ∀ i j, ω i = ω j)
-    (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))    
-    (h_primitive_noise : ∀ t i j, |ξ t i - ξ t j| ≤ 2 * B)
-    (h_init : ∀ i j, ϕ 0 i - ϕ 0 j = θ i - θ j)
-    (h_diff_integrable : ∀ t i j, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
+    (reg : ResonantPhaseRegime ϕ ω κ ξ B c θ)
     (T : ℝ) (hT : 0 < T)
-    (h_integrable : ∀ i j, IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) volume 0 T)
     -- All slots across the network are synchronized on their imaginary axes
-    (h_imag_locked : ∀ i j, (PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j).im = 0) :
+    (h_imag_locked : ∀ i j, (PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j).im = 0) :
 
-    |∑ i : N, ∑ j : N, ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ 
+    |∑ i : N, ∑ j : N, ‖PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ 
       (Fintype.card N : ℝ)^2 * (B * T) := by
 
   -- Step 1: Establish the network pointwise bound for all slots (i, j)
-  have h_pointwise_all : ∀ i j, |‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ B * T := by
+  have h_pointwise_all : ∀ i j, |‖PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ B * T := by
     intro i j
-    -- The absolute value of a norm is just the norm itself since norms are non-negative
     rw [abs_of_nonneg (norm_nonneg _)]
-    exact complex_norm_error_bound_single_slot ϕ ω κ ξ B h_B h_flow i j θ c 
-      (h_amplitude_i i) (h_amplitude_j j) (h_omega i j) h_spectral_contraction
-      (h_primitive_noise · i j) (h_init i j) (h_diff_integrable · i j) T hT (h_integrable i j) (h_imag_locked i j)
+    exact complex_norm_error_bound_single_slot ϕ ω κ ξ B i j θ c reg T hT (h_imag_locked i j)
 
   -- Step 2: Feed the pointwise bounds into LEMMA 1 to evaluate the entire matrix double sum
-  have h_grid_scale := matrix_grid_double_sum_bound
-    (fun i j => ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖)
+  exact matrix_grid_double_sum_bound
+    (fun i j => ‖PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)‖)
     (B * T)
     h_pointwise_all
 
-  exact h_grid_scale
 
 omit [DecidableEq N] in
 /-- SYNTHESIS THEOREM 3: The Complete Constructive Emergence Handshake.
@@ -954,7 +932,6 @@ theorem derive_order_parameter_handshake_from_dynamics
     (t : ℝ) (T : ℝ) (hT : 0 < T) (Ω : ℝ) (r : ℝ)
     (reg : ResonantPhaseRegime ϕ ω κ (fun _ _ => 0) 0 c θ)
     (h_locked_diff : ∀ t' ∈ Set.Ioc 0 T, ∀ i j : N, (ϕ t' i : ℝ) - (ϕ t' j : ℝ) = θ i - θ j)
-    (_h_snapshot_lock : ∀ i j : N, (ϕ t i : ℝ) - (ϕ t j : ℝ) = θ i - θ j)
     (h_imag_locked : ∀ i j : N, (PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T - AmplitudeWeight c i j).im = 0)
     (h_static_trace_handshake : (∑ i, ∑ j, (κ i j * ‖exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖) / (Fintype.card N : ℝ)^2) =
       -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i Ω)^2) / ((PhaseOrderParameter ϕ t)^2))))
@@ -967,9 +944,7 @@ theorem derive_order_parameter_handshake_from_dynamics
   -- Step 1: Physical consumption of the grid error LEMMA.
   have h_global_fluctuation_vanishing : |∑ i : N, ∑ j : N, ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ 0 := by
     have h_raw := complex_norm_error_bound_matrix_grid
-      ϕ ω κ (fun _ _ => 0) 0 reg.h_B reg.h_flow θ c reg.h_amplitude reg.h_amplitude reg.h_omega reg.h_spectral_contraction
-      (fun t' i j => pmad_flow_noise_diff_bound reg.h_flow t' i j) reg.h_init reg.h_diff_integrable T hT
-      (fun i j => pmad_flow_overlap_intervalIntegrable reg.h_flow i j T) h_imag_locked
+      ϕ ω κ (fun _ _ => 0) 0 θ c reg T hT h_imag_locked
     linarith
 
   -- Step 2: Use LEMMA 3 pointwise to reduce the historical integrals down to static snapshot offsets
@@ -993,6 +968,7 @@ theorem derive_order_parameter_handshake_from_dynamics
 
   -- Close the proof by directly applying the handshake condition.
   exact h_static_trace_handshake
+
 
 /-- DERIVING the macro-scale metric profile expression from the underlying microscale 
     vorticity and order parameter definitions inside the synchronized domain. -/
@@ -1039,16 +1015,9 @@ theorem pmad_micro_censorship_alltime
     (κ : N → N → ℝ)
     (ϕ : Trajectory N)
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
-    (μ_spectrum : N → ℝ)
     (Ω : ℝ → ℝ)
-    (Ω_min : ℝ)
-    (hΩ_min : 0 ≤ Ω_min)
-    (h_rg_flow : ∀ t, Ω_min ≤ Ω t)
-    (g : Matrix N N ℝ)
-    (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N)
     (r : ℝ)
     (R_ϕ : ℝ)
-    (hR_ϕ_nonneg : 0 ≤ R_ϕ)
     (h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ)
     (δ : ℝ)
     (hδ_pos : 0 < δ)
@@ -1062,39 +1031,13 @@ theorem pmad_micro_censorship_alltime
     (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j =
       (κ i j * ‖PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T‖) / (Fintype.card N : ℝ)^2)
     (h_locked_diff : ∀ t' ∈ Set.Ioc 0 T, ∀ i j : N, (ϕ t' i : ℝ) - (ϕ t' j : ℝ) = θ i - θ j)
-    -- Quantified over all time to match the dynamic timeline
-    (h_snapshot_lock : ∀ (i j : N) (t : ℝ), (ϕ t i : ℝ) - (ϕ t j : ℝ) = θ i - θ j)
     (h_imag_locked : ∀ i j : N, (PhaseOverlapFunctional ϕ ω κ (fun _ _ => 0) 0 reg.h_flow i j T - AmplitudeWeight c i j).im = 0)
     (h_static_trace_handshake : ∀ t, (∑ i, ∑ j, (κ i j * ‖exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖) / (Fintype.card N : ℝ)^2) =
       -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2)))) :
     ∃ B : ℝ, ∀ t, |∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j| ≤ B := by
 
   let R_Q := (Fintype.card N : ℝ)
-
-  have _h_rg_decay : ∀ t, AttractorDimensionality μ_spectrum (Ω t) ≤ AttractorDimensionality μ_spectrum Ω_min := by
-    intro t
-    exact rg_flow_finite_monotonicity μ_spectrum Ω_min (Ω t) hΩ_min (h_rg_flow t)
-
-  let lambda_stable : ℝ → ℝ := fun _ => -1
-  have h_stable_proof : IsAdmissibleAttractor lambda_stable := by
-    unfold IsAdmissibleAttractor
-    have h_int : ∀ T_val : ℝ, T_val > 0 → (1 / T_val) * ∫ t in (0)..T_val, lambda_stable t = -1 := by
-      intro T_val hT
-      rw [intervalIntegral.integral_const]
-      simp only [sub_zero, smul_eq_mul]
-      have h_cancel : (1 / T_val) * (T_val * -1) = (T_val / T_val) * -1 := by ring
-      rw [h_cancel, div_self (ne_of_gt hT), one_mul]
-    have h_eventually_eq : ∀ᶠ T_val in atTop, (1 / T_val) * ∫ t in (0)..T_val, lambda_stable t = -1 := by
-      filter_upwards [eventually_gt_atTop (0 : ℝ)] with T_val hT
-      exact h_int T_val hT
-    rw [Filter.limsup_congr h_eventually_eq]
-    rw [Filter.limsup_const]
-    norm_num
-
-  have h_capacity_limit := dynamics_to_renormalization_capacity_bound μ_spectrum Ω_min lambda_stable h_stable_proof
-
-  have _h_total_horizon : AttractorDimensionality μ_spectrum Ω_min + (∑ i, ∑ j, g i j) ≤ R_Q + R_Q := by
-    linarith [h_capacity_limit, h_substrate]
+  have hR_ϕ_nonneg : 0 ≤ R_ϕ := le_trans (abs_nonneg _) (h_phi_bound 0)
 
   -- PROVE the dynamic emergence link natively from `derive_order_parameter_handshake_from_dynamics`
   have h_emergence_def : ∀ t, ∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j =
@@ -1102,14 +1045,11 @@ theorem pmad_micro_censorship_alltime
     intro t'
     have h_handshake := derive_order_parameter_handshake_from_dynamics
       ω κ ϕ PhaseVorticityTensor θ c t' T hT (Ω t') r reg
-      h_locked_diff (fun i j => h_snapshot_lock i j t')
-      h_imag_locked (h_static_trace_handshake t') (h_vorticity_equilibrium t')
+      h_locked_diff h_imag_locked (h_static_trace_handshake t') (h_vorticity_equilibrium t')
 
-    have h_id := derive_arnold_tongue_emergence_identity
+    exact derive_arnold_tongue_emergence_identity
       ω κ (fun _ _ => 0) 0 ϕ reg.h_flow PhaseVorticityTensor t' T (Ω t') r
       h_arnold_tongue (h_vorticity_equilibrium t') h_handshake
-
-    exact h_id
 
   let B_val := 1 + ((2 * R_ϕ * |r| + R_Q^2) / δ)
   use B_val
@@ -1164,174 +1104,9 @@ theorem pmad_micro_censorship_alltime
   rw [h_div_abs, h_denom_abs] at h_triangle
   linarith
 
-  
-/-- Upgraded Emergent Censorship All-Time Theorem w/ Noise Floor Envelope (B_noise > 0).
-    Establishes that even when background noise introduces a persistent 
-    fluctuation envelope to the emergent spacetime manifold, the total spatial sum 
-    of the dynamic microscale metric remains universally upper-bounded for all time. -/
-theorem pmad_micro_censorship_alltime_noisy
-    (ω : N → ℝ)
-    (κ : N → N → ℝ) 
-    (ξ : ℝ → N → ℝ)
-    (B_noise : ℝ)
-    (h_B : 0 ≤ B_noise) 
-    (ϕ : Trajectory N) 
-    (h_dyn : IsPmadFlow ϕ ω κ ξ B_noise)
-    (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
-    (μ_spectrum : N → ℝ) 
-    (Ω : ℝ → ℝ)          
-    (Ω_min : ℝ)          
-    (hΩ_min : 0 ≤ Ω_min)
-    (h_rg_flow : ∀ t, Ω_min ≤ Ω t) 
-    (g : Matrix N N ℝ)   
-    (h_substrate : ∑ i, ∑ j, g i j ≤ Fintype.card N) 
-    (r : ℝ) 
-    (R_ϕ : ℝ)
-    (hR_ϕ_nonneg : 0 ≤ R_ϕ)
-    (h_phi_bound : ∀ t, |∑ i, ϕ t i| ≤ R_ϕ)
-    (δ : ℝ)
-    (hδ_pos : 0 < δ)
-    (h_order_bound : ∀ t, δ ≤ (PhaseOrderParameter ϕ t)^2)
-    (T : ℝ) (hT : 0 < T) 
-    (h_arnold_tongue : IsInArnoldTongue ω κ ξ B_noise ϕ h_dyn T) 
-    (h_vorticity_equilibrium : ∀ t i j, PhaseVorticityTensor κ ϕ t i j = 
-      (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B_noise h_dyn i j T‖) / (Fintype.card N : ℝ)^2)
-    (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) - 
-      (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤ 
-      (Fintype.card N : ℝ)^2 * (B_noise * T)) :
-    ∃ B : ℝ, ∀ t, |∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j| ≤ B := by
-  
-  -- Step 1: Initialize the network cardinality bounds using native matrix trace size
-  let R_Q := (Fintype.card N : ℝ)
-  
-  -- Step 2: Use verified RG flow invariants to assert stability across scale updates
-  have _h_rg_decay : ∀ t, AttractorDimensionality μ_spectrum (Ω t) ≤ AttractorDimensionality μ_spectrum Ω_min := by
-    intro t
-    exact rg_flow_finite_monotonicity μ_spectrum Ω_min (Ω t) hΩ_min (h_rg_flow t)
-
-  -- Step 3: Instantiate a local, uniform Lyapunov exponent to clear the capacity boundary natively
-  let lambda_stable : ℝ → ℝ := fun _ => -1
-  have h_stable_proof : IsAdmissibleAttractor lambda_stable := by
-    unfold IsAdmissibleAttractor
-    have h_int : ∀ T_val : ℝ, T_val > 0 → (1 / T_val) * ∫ t in (0)..T_val, lambda_stable t = -1 := by
-      intro T_val hT
-      rw [intervalIntegral.integral_const]
-      simp only [sub_zero, smul_eq_mul]
-      have h_cancel : (1 / T_val) * (T_val * -1) = (T_val / T_val) * -1 := by ring
-      rw [h_cancel, div_self (ne_of_gt hT), one_mul]
-    have h_eventually_eq : ∀ᶠ T_val in atTop, (1 / T_val) * ∫ t in (0)..T_val, lambda_stable t = -1 := by
-      filter_upwards [eventually_gt_atTop (0 : ℝ)] with T_val hT
-      exact h_int T_val hT
-    rw [Filter.limsup_congr h_eventually_eq]
-    rw [Filter.limsup_const]
-    norm_num
-
-  -- Step 4: Invoke the capacity bound using the verified attractor proof to consume μ_spectrum natively
-  have h_capacity_limit := dynamics_to_renormalization_capacity_bound μ_spectrum Ω_min lambda_stable h_stable_proof
-  
-  -- Step 5: Anchor the background context matrix g to ensure it acts as an active constraint
-  have _h_total_horizon : AttractorDimensionality μ_spectrum Ω_min + (∑ i, ∑ j, g i j) ≤ R_Q + R_Q := by
-    linarith [h_capacity_limit, h_substrate]
-
-  have h_physical_stability : 0 ≤ B_noise ∧ IsInArnoldTongue ω κ ξ B_noise ϕ h_dyn T := ⟨h_B, h_arnold_tongue⟩
-  
-  have h_bounded_noise_horizon : 0 ≤ R_Q * B_noise := by
-    have h_card_nonneg : 0 ≤ R_Q := by positivity
-    nlinarith [h_physical_stability.left]
-  
-  -- PHYSICAL GROUNDING 2: Natively consumes h_vorticity_equilibrium via Time-Collapse LEMMA
-  have h_vorticity_saturation : ∀ t i j, ∃ θ : N → ℝ, 
-      (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j) → 
-      (h_locked : ∀ t ∈ Set.Ioc 0 T, (ϕ t i : ℝ) - (ϕ t j : ℝ) = θ i - θ j) → 
-      PhaseVorticityTensor κ ϕ t i j = (κ i j * ‖exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖) / R_Q^2 := by
-    intro t i j
-    -- Instantiate the local synchronization slice coordinate θ from the dynamic trajectory
-    let θ_slice := fun (node : N) => ϕ 0 node
-    use θ_slice
-    intro h_init_cond h_locked_cond
-    rw [h_vorticity_equilibrium t i j]
-    -- Invoke Ergodic-to-Snapshot Time Collapse LEMMA
-    have h_collapse := phase_overlap_locked_time_collapse ω κ ξ B_noise ϕ h_dyn i j θ_slice T hT h_init_cond h_locked_cond
-    rw [h_collapse]
-
-  -- Step 6: Formulate the universal witness bound B absorbing the global noise footprint
-  let MacroBound := 1 + ((2 * R_ϕ * |r| + R_Q^2) / δ)
-  let NoiseFloor := R_Q^2 * (B_noise * T)
-  let B_val := MacroBound + NoiseFloor
-  use B_val
-  intro t
-  
-  -- Step 7: Define variables and apply the triangle inequality using abs_add_le
-  let MicroSum := ∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j
-  let Num := (2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2)
-  let Den := (PhaseOrderParameter ϕ t)^2
-  let MacroFormula := -(1 - Num / Den)
-  
-  -- Clear the leading negative sign natively using abs_neg LEMMA
-  have h_macro_abs : |MacroFormula| = |1 - Num / Den| := by
-    change |(-(1 - Num / Den))| = |1 - Num / Den|
-    exact abs_neg (1 - Num / Den)
-
-  -- Use abs_add_le to firmly anchor the microscale trace to the macro target formula
-  have h_tri_bridge : |MicroSum| ≤ |1 - Num / Den| + NoiseFloor := by
-    have h_le := abs_add_le (MicroSum - MacroFormula) MacroFormula
-    have h_id : MicroSum - MacroFormula + MacroFormula = MicroSum := by ring
-    rw [h_id] at h_le
-    rw [h_macro_abs] at h_le
-    have h_env := h_emergence_envelope t
-    linarith
-
-  -- Transition the target goal smoothly to the ideal macro boundaries
-  refine le_trans h_tri_bridge ?_
-  
-  -- Step 8: Segment the macro-fractions for algebraic tracking
-  have h_triangle := abs_sub 1 (Num / Den)
-  rw [abs_one] at h_triangle
-
-  have h_div_abs : |Num / Den| = |Num| / |Den| := abs_div Num Den
-  
-  have h_denom_pos : 0 < Den := lt_of_lt_of_le hδ_pos (h_order_bound t)
-  have h_denom_abs : |Den| = Den := abs_of_pos h_denom_pos
-  
-  -- Step 9: Bind the macro-numerator using exact native limits
-  have h_num_bound : |Num| ≤ 2 * R_ϕ * |r| + R_Q^2 := by
-    have h_num_tri := abs_sub (2 * (∑ i, ϕ t i) * r) ((∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2)
-    have h_term1 : |2 * (∑ i, ϕ t i) * r| ≤ 2 * R_ϕ * |r| := by
-      rw [abs_mul, abs_mul]
-      have h_two : |(2:ℝ)| = 2 := abs_of_pos (by norm_num)
-      rw [h_two]
-      gcongr
-      exact h_phi_bound t
-    have h_term2 : |(∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2| ≤ R_Q^2 := by
-      have h_sq_nonneg : 0 ≤ (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2 := sq_nonneg _
-      rw [abs_of_nonneg h_sq_nonneg]
-      have h_abs := phase_space_occupation_density_sum_bound ω κ ϕ t (Ω t)
-      rw [abs_le] at h_abs
-      have h_sq_le : (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2 ≤ R_Q^2 := by
-        nlinarith [h_abs.left, h_abs.right]
-      exact h_sq_le
-    linarith
-
-  -- Step 10: Execute fractional bounding over the denominator limits
-  have h_frac_le : |Num| / Den ≤ (2 * R_ϕ * |r| + R_Q^2) / δ := by
-    rw [div_le_iff₀ h_denom_pos]
-    have h_step1 : |Num| ≤ (2 * R_ϕ * |r| + R_Q^2) / δ * Den := by
-      have h_rearrange : (2 * R_ϕ * |r| + R_Q^2) / δ * Den = ((2 * R_ϕ * |r| + R_Q^2) * Den) / δ := by ring
-      rw [h_rearrange]
-      rw [le_div_iff₀ hδ_pos]
-      have h_order := h_order_bound t
-      have h_pos_factor : 0 ≤ 2 * R_ϕ * |r| + R_Q^2 := by
-        have h_abs_r : 0 ≤ |r| := abs_nonneg r
-        have h_sq_Q : 0 ≤ R_Q^2 := sq_nonneg R_Q
-        nlinarith [hR_ϕ_nonneg, h_abs_r, h_sq_Q]
-      nlinarith [h_order, h_pos_factor]
-    linarith
-
-  -- Step 11: Final linear collation matching the noisy coordinate envelope witness
-  rw [h_div_abs, h_denom_abs] at h_triangle
-  linarith
-
-/-- Single-Regime Wrapper for `pmad_micro_censorship_alltime_noisy`. -/
+/-- Single-Regime Noisy Microscale Censorship Theorem.
+    Proves that under `NoisyCensorshipRegime`, the total microscale metric sum remains
+    uniformly bounded for all time `t` by `1 + ((2 * R_ϕ * |r| + R_Q^2) / δ) + R_Q^2 * (B_noise * T)`. -/
 theorem pmad_micro_censorship_of_regime
     {N : Type*} [DecidableEq N] [Fintype N]
     {ω : N → ℝ} {κ : N → N → ℝ} {ξ : ℝ → N → ℝ} {B_noise : ℝ}
@@ -1340,18 +1115,88 @@ theorem pmad_micro_censorship_of_regime
     {μ_spectrum : N → ℝ} {Ω : ℝ → ℝ} {Ω_min : ℝ}
     {g : Matrix N N ℝ} {r R_ϕ δ T : ℝ}
     (reg : NoisyCensorshipRegime ω κ ξ B_noise ϕ PhaseVorticityTensor μ_spectrum Ω Ω_min g r R_ϕ δ T) :
-    ∃ B : ℝ, ∀ t, |∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j| ≤ B :=
-  pmad_micro_censorship_alltime_noisy ω κ ξ B_noise reg.h_B ϕ reg.h_dyn
-    PhaseVorticityTensor μ_spectrum Ω Ω_min reg.hΩ_min reg.h_rg_flow g reg.h_substrate
-    r R_ϕ reg.hR_ϕ_nonneg reg.h_phi_bound δ reg.hδ_pos reg.h_order_bound T reg.hT
-    reg.h_arnold_tongue reg.h_vorticity_equilibrium reg.h_emergence_envelope
+    (∃ B : ℝ, ∀ t, |∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j| ≤ B) ∧
+    (∀ t, AttractorDimensionality μ_spectrum (Ω t) + (∑ i, ∑ j, g i j) ≤ 2 * (Fintype.card N : ℝ)) := by
+  let R_Q := (Fintype.card N : ℝ)
+  refine ⟨?_, ?_⟩
+  · -- Part 1: Uniform Microscale Censorship Envelope
+    let B_val := 1 + ((2 * R_ϕ * |r| + R_Q^2) / δ) + R_Q^2 * (B_noise * T)
+    use B_val
+    intro t
+
+    have h_env := reg.h_emergence_envelope t
+    rw [abs_le] at h_env
+
+    let Macro := -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2)))
+    have h_macro_bound : |Macro| ≤ 1 + ((2 * R_ϕ * |r| + R_Q^2) / δ) := by
+      dsimp [Macro]
+      rw [abs_neg]
+      let Num := (2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2)
+      let Den := (PhaseOrderParameter ϕ t)^2
+      have h_triangle := abs_sub 1 (Num / Den)
+      rw [abs_one] at h_triangle
+      have h_div_abs : |Num / Den| = |Num| / |Den| := abs_div Num Den
+      have h_denom_pos : 0 < Den := lt_of_lt_of_le reg.hδ_pos (reg.h_order_bound t)
+      have h_denom_abs : |Den| = Den := abs_of_pos h_denom_pos
+      have h_num_bound : |Num| ≤ 2 * R_ϕ * |r| + R_Q^2 := by
+        have h_num_tri := abs_sub (2 * (∑ i, ϕ t i) * r) ((∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2)
+        have h_term1 : |2 * (∑ i, ϕ t i) * r| ≤ 2 * R_ϕ * |r| := by
+          rw [abs_mul, abs_mul]
+          have h_two : |(2:ℝ)| = 2 := abs_of_pos (by norm_num)
+          rw [h_two]
+          gcongr
+          exact reg.h_phi_bound t
+        have h_term2 : |(∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2| ≤ R_Q^2 := by
+          rw [abs_of_nonneg (sq_nonneg _)]
+          have h_abs := phase_space_occupation_density_sum_bound ω κ ϕ t (Ω t)
+          rw [abs_le] at h_abs
+          nlinarith [h_abs.left, h_abs.right]
+        linarith
+      have h_frac_le : |Num| / Den ≤ (2 * R_ϕ * |r| + R_Q^2) / δ := by
+        rw [div_le_iff₀ h_denom_pos]
+        have h_step1 : |Num| ≤ (2 * R_ϕ * |r| + R_Q^2) / δ * Den := by
+          have h_rearrange : (2 * R_ϕ * |r| + R_Q^2) / δ * Den = ((2 * R_ϕ * |r| + R_Q^2) * Den) / δ := by ring
+          rw [h_rearrange, le_div_iff₀ reg.hδ_pos]
+          have h_order : δ ≤ Den := reg.h_order_bound t
+          have h_pos_factor : 0 ≤ 2 * R_ϕ * |r| + R_Q^2 := by
+            nlinarith [reg.hR_ϕ_nonneg, abs_nonneg r, sq_nonneg R_Q]
+          exact mul_le_mul h_num_bound h_order (le_of_lt reg.hδ_pos) h_pos_factor
+        linarith
+      rw [h_div_abs, h_denom_abs] at h_triangle
+      linarith
+
+    rw [abs_le] at h_macro_bound ⊢
+    dsimp [B_val, R_Q] at h_macro_bound ⊢
+    constructor <;> linarith
+
+  · -- Part 2: RG Monotonicity + Renormalization Capacity + Substrate Horizon Bound
+    let lambda_stable : ℝ → ℝ := fun _ => -1
+    have h_stable_proof : IsAdmissibleAttractor lambda_stable := by
+      unfold IsAdmissibleAttractor
+      have h_int : ∀ T_val : ℝ, T_val > 0 → (1 / T_val) * ∫ t in (0)..T_val, lambda_stable t = -1 := by
+        intro T_val hT_val
+        rw [intervalIntegral.integral_const]
+        simp only [sub_zero, smul_eq_mul]
+        have h_cancel : (1 / T_val) * (T_val * -1) = (T_val / T_val) * -1 := by ring
+        rw [h_cancel, div_self (ne_of_gt hT_val), one_mul]
+      have h_eventually_eq : ∀ᶠ T_val in atTop, (1 / T_val) * ∫ t in (0)..T_val, lambda_stable t = -1 := by
+        filter_upwards [eventually_gt_atTop (0 : ℝ)] with T_val hT_val
+        exact h_int T_val hT_val
+      rw [Filter.limsup_congr h_eventually_eq, Filter.limsup_const]
+      norm_num
+    have h_capacity_limit := dynamics_to_renormalization_capacity_bound μ_spectrum Ω_min lambda_stable h_stable_proof
+    intro t
+    have h_rg_decay := rg_flow_finite_monotonicity μ_spectrum Ω_min (Ω t) reg.hΩ_min (reg.h_rg_flow t)
+    linarith [h_rg_decay, h_capacity_limit, reg.h_substrate]
 
 /-- CLV-Coupled Noisy Singularity Censorship Theorem:
 Combines the noisy microscale fluctuation envelope `R_Q^2 * (B_noise * T)` with a
 verified `CovariantTangentSplitting κ ϕ lambda_s` (`lambda_s < 0`), replacing the
-hardcoded `-1` rate with the true CLV contraction exponent and certifying that both
-the noisy microscale sum and the CLV-regularized spacetime metric remain bounded
-with strictly positive compliance floor `CLVComplianceFloor α split t > 0` for all `t`. -/
+hardcoded `-1` rate with the true CLV contraction exponent and certifying:
+1. Axiom A3 attractor admissibility (`IsAdmissibleAttractor`),
+2. Strictly positive compliance floor (`CLVComplianceFloor α split t > 0`),
+3. Total RG + substrate degrees-of-freedom horizon (`D_A(Ω t) + ∑ g ≤ 2|N|`), and
+4. Uniform bounds on both the noisy microscale sum and the CLV-regularized spacetime metric `g₀₀`. -/
 theorem pmad_micro_censorship_clv_noisy
     {lambda_s : ℝ}
     (d : ℕ)
@@ -1364,8 +1209,7 @@ theorem pmad_micro_censorship_clv_noisy
     (h_lambda_strict : lambda_s < 0)
     (α : ℝ)
     (hα : 0 < α)
-    (h_angle_pos : ∀ t, 0 < SubspaceHyperAngle split t)
-    (h_angle_lt : ∀ t, SubspaceHyperAngle split t < Real.pi / 2)
+    (h_angle : ∀ t, SubspaceHyperAngle split t ∈ Set.Ioo 0 (Real.pi / 2))
     (PhaseVorticityTensor : (N → N → ℝ) → Trajectory N → ℝ → N → N → ℝ)
     (μ_spectrum : N → ℝ)
     (Ω : ℝ → ℝ)
@@ -1377,6 +1221,7 @@ theorem pmad_micro_censorship_clv_noisy
       -(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2)))) :
     IsAdmissibleAttractor (fun _ => lambda_s) ∧
     (∀ t, 0 < CLVComplianceFloor α split t) ∧
+    (∀ t, AttractorDimensionality μ_spectrum (Ω t) + (∑ i, ∑ j, g i j) ≤ 2 * (Fintype.card N : ℝ)) ∧
     (∃ B_micro B_macro : ℝ, ∀ t,
 
       |∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j| ≤ B_micro ∧
@@ -1395,13 +1240,14 @@ theorem pmad_micro_censorship_clv_noisy
       exact h_int T_val hT_val
     rw [Filter.limsup_congr h_ev, Filter.limsup_const]
     exact h_lambda_strict
-  -- 2. Obtain the noisy microscale bound via `NoisyCensorshipRegime`
-  obtain ⟨B_micro, hB_micro⟩ := pmad_micro_censorship_of_regime reg
+  -- 2. Obtain the noisy microscale bound & RG capacity horizon via `NoisyCensorshipRegime`
+  obtain ⟨⟨B_micro, hB_micro⟩, h_rg_horizon⟩ := pmad_micro_censorship_of_regime reg
   -- 3. Bound the macroscopic `g₀₀` component with time-dependent `Ω t` and combine all witnesses
   let R_Q := (Fintype.card N : ℝ)
   let B_macro := 1 + ((2 * R_ϕ * |r| + R_Q^2) / δ)
   refine ⟨h_admissible,
-    fun t => clv_compliance_floor_pos α hα split t (h_angle_pos t) (h_angle_lt t),
+    fun t => clv_compliance_floor_pos α hα split t (h_angle t).1 (h_angle t).2,
+    h_rg_horizon,
     ⟨B_micro, B_macro, fun t => ⟨hB_micro t, ?_⟩⟩⟩
   rw [h_inverse_eval t, abs_neg]
   let Num := (2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2)
@@ -1420,8 +1266,7 @@ theorem pmad_micro_censorship_clv_noisy
       gcongr
       exact reg.h_phi_bound t
     have h_term2 : |(∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2| ≤ R_Q^2 := by
-      have h_sq_nonneg : 0 ≤ (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2 := sq_nonneg _
-      rw [abs_of_nonneg h_sq_nonneg]
+      rw [abs_of_nonneg (sq_nonneg _)]
       have h_abs := phase_space_occupation_density_sum_bound ω κ ϕ t (Ω t)
       rw [abs_le] at h_abs
       nlinarith [h_abs.left, h_abs.right]
@@ -1438,6 +1283,7 @@ theorem pmad_micro_censorship_clv_noisy
     linarith
   rw [h_div_abs, h_denom_abs] at h_triangle
   linarith
+
   
 omit [DecidableEq N] [Fintype N] in
 /-- THE GEODESIC SINGULARITY CENSORSHIP COUPLING OPERATOR
@@ -2479,7 +2325,7 @@ theorem mutation_attractor_recurrent_intersection
     AsymptoticGIntersection G_seq1 G_seq2 := by
 
   -- Step 1: Instantiate the microscale censorship limit envelope via `NoisyCensorshipRegime`
-  obtain ⟨B_val, _h_bounded_metric⟩ := pmad_micro_censorship_of_regime reg
+  obtain ⟨⟨B_val, _h_bounded_metric⟩, _⟩ := pmad_micro_censorship_of_regime reg
 
   -- Step 2: Initialize synchronized subharmonic clock sequences
   let τ_seq := fun (n : ℕ) => (n : ℝ)

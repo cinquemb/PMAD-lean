@@ -65,6 +65,23 @@ structure DualToneWaveform where
 structure MeanFieldState (N : ℕ) where
   (phi_val : ℝ)
   (h_norm : |phi_val| ≤ 1)
+  
+/-- Bundled Spiral-VM Non-Linear Lattice & RG Optimization Regime -/
+structure SpiralLatticeRegime
+    {M : Type} [DecidableEq M] [Fintype M]
+    (cfg : SpiralAlgoConfig)
+    (μ_spectrum : M → ℝ) (Ω gradE η r : ℝ)
+    (w : DualToneWaveform) (J h0 h1 : ℝ) : Prop where
+  h_Ω : 0 < Ω
+  h_η : η > 0
+  h_gradE : gradE ≥ (AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1)) + 1
+  h_init : CoprimeInitialState cfg.N
+  h_w : w.carrier_amp = 20
+  h_J : J ≥ 0
+  h_h0 : h0 ≥ 0
+  h_h1 : h1 ≥ 0
+  h_bounds : r < Ω ∧ PhaseGradientStep Ω gradE η > r
+
 
 /-- Formal proof that the loop execution size remains strictly polynomial in `log N`. -/
 lemma executionStepCount_polynomial (cfg : SpiralAlgoConfig) :
@@ -246,39 +263,34 @@ theorem gradient_descent_runtime_linearity
 theorem dual_tone_attractor_smoothing
     {M : Type} [DecidableEq M] [Fintype M] (cfg : SpiralAlgoConfig)
     (μ_spectrum : M → ℝ) (Ω : ℝ) (gradE : ℝ) (η : ℝ) (r : ℝ)
-    (h_Ω : 0 < Ω) (h_η : η > 0)
-    (h_gradE : gradE ≥ (AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1)) + 1) 
-    (h_init : CoprimeInitialState cfg.N)
-    (w : DualToneWaveform) (_h_w : w.carrier_amp = 20)
-    (h_bounds : r < Ω ∧ PhaseGradientStep Ω gradE η > r) :
+    (w : DualToneWaveform) (J h0 h1 : ℝ)
+    (lat : SpiralLatticeRegime cfg μ_spectrum Ω gradE η r w J h0 h1) :
     ∃ (c_global : ℝ), 
       executionStepCount cfg ≤ c_global * log (cfg.N : ℝ) ∧ 
       IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N := by
   
   -- 1. Derive the continuous contraction mapping directly from the dual-tone physics
   have h_contractive : |PhaseGradientStep Ω gradE η - r| < |Ω - r| := by
-    have h_bounds_unfolded := h_bounds
+    have h_bounds_unfolded := lat.h_bounds
     unfold PhaseGradientStep at h_bounds_unfolded
     unfold PhaseGradientStep
     
     -- Extract the physical C monotonicity
-    have h_c_theorem := rg_flow_c_theorem_analog μ_spectrum Ω (Ω + 1) h_Ω (by linarith)
+    have h_c_theorem := rg_flow_c_theorem_analog μ_spectrum Ω (Ω + 1) lat.h_Ω (by linarith)
     
     rw [abs_of_pos (by linarith [h_bounds_unfolded.2])]
     rw [abs_of_pos (by linarith [h_bounds_unfolded.1])]
     
-    -- Lean views (AttractorDimensionality Ω - AttractorDimensionality (Ω+1)) as an opaque variable X.
-    -- From h_gradE, we have: gradE ≥ X + 1. 
-    -- To prove η * gradE > 0 (which requires gradE > 0), linarith MUST have proof that X ≥ 0.
     have h_physical_drive : η * gradE > 0 := by
       have h_decay : AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1) ≥ 0 := by linarith [h_c_theorem]
-      have h_gradE_positive : gradE > 0 := by linarith [h_gradE, h_decay]
-      exact mul_pos h_η h_gradE_positive
+      have h_gradE_positive : gradE > 0 := by linarith [lat.h_gradE, h_decay]
+      exact mul_pos lat.h_η h_gradE_positive
       
     linarith [h_bounds_unfolded.1, h_bounds_unfolded.2, h_physical_drive]
 
   -- 2. Pipe these variables directly into the updated runtime linearity matrix
-  exact gradient_descent_runtime_linearity cfg μ_spectrum Ω gradE η r h_Ω h_η h_gradE h_init h_contractive h_bounds
+  exact gradient_descent_runtime_linearity cfg μ_spectrum Ω gradE η r lat.h_Ω lat.h_η lat.h_gradE lat.h_init h_contractive lat.h_bounds
+
 
 /-- Non-Linear Hamiltonian Velocity Bounding Theorem.
     Derives the continuous Lipschitz baseline metric L directly 
@@ -304,30 +316,27 @@ theorem mean_field_velocity_bounded
 theorem global_non_linear_lattice_convergence
     {M : Type} [DecidableEq M] [Fintype M] (cfg : SpiralAlgoConfig)
     (μ_spectrum : M → ℝ) (Ω : ℝ) (gradE : ℝ) (η : ℝ) (r : ℝ)
-    (h_Ω : 0 < Ω) (h_η : η > 0) 
-    (h_gradE : gradE ≥ (AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1)) + 1) 
-    (h_init : CoprimeInitialState cfg.N)
-    (w : DualToneWaveform) (h_w : w.carrier_amp = 20)
-    (state_vec : MeanFieldState cfg.N) (J h0 h1 : ℝ) (h_J : J ≥ 0) (h_h0 : h0 ≥ 0) (h_h1 : h1 ≥ 0)
-    (h_bounds : r < Ω ∧ Ω - η * gradE > r) :
+    (w : DualToneWaveform)
+    (state_vec : MeanFieldState cfg.N) (J h0 h1 : ℝ)
+    (lat : SpiralLatticeRegime cfg μ_spectrum Ω gradE η r w J h0 h1) :
     
     ∃ (_L_constant : ℝ), 
       IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N ∧ 
       executionStepCount cfg ≤ (1 / log 2 + 3) * log (cfg.N : ℝ) := by
   
   -- 1. Extract the bounded velocity threshold metric from spiral-vm mean-field lattice coordinates
-  have h_vel := mean_field_velocity_bounded cfg J h0 h1 h_J h_h0 h_h1 state_vec
+  have h_vel := mean_field_velocity_bounded cfg J h0 h1 lat.h_J lat.h_h0 lat.h_h1 state_vec
   rcases h_vel with ⟨L, _, _⟩
 
   -- 2. Pull the clean dual-tone optimization pass directly to resolve the runtime bounds
-  have h_dual := dual_tone_attractor_smoothing cfg μ_spectrum Ω gradE η r h_Ω h_η h_gradE h_init w h_w h_bounds
+  have h_dual := dual_tone_attractor_smoothing cfg μ_spectrum Ω gradE η r w J h0 h1 lat
   rcases h_dual with ⟨_, h_poly, h_subexp⟩
   
   -- 3. Satisfy the global linear runtime parameters via direct term matching
   use L
   have h_poly_exact := executionStepCount_polynomial cfg
   exact ⟨h_subexp, h_poly_exact⟩
-  
+
 /-- THE STOCHASTIC GRADIENT DESCENT COMPLEXITY THEOREM:
     Bridges Probabilty. closed-loop noise integration
     directly to the gradient descent optimization path over the physical lattice.
@@ -341,12 +350,9 @@ theorem stochastic_gradient_linearity
     (reg : ResonantPhaseRegime ϕ ω κ ξ B c θ)
     (T : ℝ) (hT : 0 < T)
     (μ_spectrum : M → ℝ) (Ω : ℝ) (gradE : ℝ) (η : ℝ) (r : ℝ)
-    (h_Ω : 0 < Ω) (h_η : η > 0)
-    (h_gradE : gradE ≥ (AttractorDimensionality μ_spectrum Ω - AttractorDimensionality μ_spectrum (Ω + 1)) + 1)
-    (h_init_state : CoprimeInitialState cfg.N)
-    (w : DualToneWaveform) (h_w : w.carrier_amp = 20)
-    (state_vec : MeanFieldState cfg.N) (J h0 h1 : ℝ) (h_J : J ≥ 0) (h_h0 : h0 ≥ 0) (h_h1 : h1 ≥ 0)
-    (h_bounds : r < Ω ∧ Ω - η * gradE > r) :
+    (w : DualToneWaveform)
+    (state_vec : MeanFieldState cfg.N) (J h0 h1 : ℝ)
+    (lat : SpiralLatticeRegime cfg μ_spectrum Ω gradE η r w J h0 h1) :
 
     ∃ (_c_stochastic : ℝ),
       IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N ∧
@@ -360,10 +366,10 @@ theorem stochastic_gradient_linearity
 
   -- 2. Pull the global non-linear lattice convergence pass to resolve the complexity bounds
   have h_convergence := global_non_linear_lattice_convergence
-    cfg μ_spectrum Ω gradE η r h_Ω h_η h_gradE h_init_state w h_w state_vec J h0 h1 h_J h_h0 h_h1 h_bounds
+    cfg μ_spectrum Ω gradE η r w state_vec J h0 h1 lat
 
   -- 3. Extract the raw structural definition components natively to unify L_constant and L_val in-place
-  have h_vel_check := mean_field_velocity_bounded cfg J h0 h1 h_J h_h0 h_h1 state_vec
+  have h_vel_check := mean_field_velocity_bounded cfg J h0 h1 lat.h_J lat.h_h0 lat.h_h1 state_vec
   rcases h_vel_check with ⟨L_val, h_L_pos, _⟩
 
   have _h_stochastic_interaction : L_val * |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ L_val * (B * T) := by
