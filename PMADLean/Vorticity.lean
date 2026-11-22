@@ -391,7 +391,7 @@ structure NoisyCensorshipRegime
     (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B_noise h_dyn i j T‖) / (Fintype.card N : ℝ)^2
   h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) -
     (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤
-    (Fintype.card N : ℝ)^2 * (4 * B_noise * T)
+    (Fintype.card N : ℝ)^2 * (B_noise * T)
     
 -- Isolate the variable omission strictly to the tensor proof that does not use matrices
 omit [DecidableEq N] [Fintype N] in
@@ -875,7 +875,7 @@ theorem complex_norm_error_bound_single_slot
     -- The State-Space Locking Premise: The historical integral has settled into its real steady state
     (h_imag_locked : (PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j).im = 0) :
 
-    ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖ ≤ 4 * B * T := by
+    ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖ ≤ B * T := by
 
   -- Step 1: Call `born_rule_noise_degradation_bound_derive_ftc_evolution` to extract the real pointwise error boundary
   have h_real_physics := born_rule_noise_degradation_bound_derive_ftc_evolution
@@ -894,7 +894,7 @@ theorem complex_norm_error_bound_single_slot
   -- Step 3: Invoke Bridge LEMMA 2 to lift the real boundary into the complex absolute norm
   have h_lift := complex_norm_from_real_bound 
     (PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)) 
-    (4 * B * T) 
+    (B * T) 
     h_real_physics 
     h_imag_locked
 
@@ -922,10 +922,10 @@ theorem complex_norm_error_bound_matrix_grid
     (h_imag_locked : ∀ i j, (PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j).im = 0) :
 
     |∑ i : N, ∑ j : N, ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ 
-      (Fintype.card N : ℝ)^2 * (4 * B * T) := by
+      (Fintype.card N : ℝ)^2 * (B * T) := by
 
   -- Step 1: Establish the network pointwise bound for all slots (i, j)
-  have h_pointwise_all : ∀ i j, |‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ 4 * B * T := by
+  have h_pointwise_all : ∀ i j, |‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖| ≤ B * T := by
     intro i j
     -- The absolute value of a norm is just the norm itself since norms are non-negative
     rw [abs_of_nonneg (norm_nonneg _)]
@@ -936,7 +936,7 @@ theorem complex_norm_error_bound_matrix_grid
   -- Step 2: Feed the pointwise bounds into LEMMA 1 to evaluate the entire matrix double sum
   have h_grid_scale := matrix_grid_double_sum_bound
     (fun i j => ‖PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T - (AmplitudeWeight c i j : ℂ)‖)
-    (4 * B * T)
+    (B * T)
     h_pointwise_all
 
   exact h_grid_scale
@@ -1198,7 +1198,7 @@ theorem pmad_micro_censorship_alltime_noisy
       (κ i j * ‖PhaseOverlapFunctional ϕ ω κ ξ B_noise h_dyn i j T‖) / (Fintype.card N : ℝ)^2)
     (h_emergence_envelope : ∀ t, |(∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j) - 
       (-(1 - ((2 * (∑ i, ϕ t i) * r - (∑ i, PhaseSpaceOccupationDensity ω κ ϕ t i (Ω t))^2) / ((PhaseOrderParameter ϕ t)^2))))| ≤ 
-      (Fintype.card N : ℝ)^2 * (4 * B_noise * T)) :
+      (Fintype.card N : ℝ)^2 * (B_noise * T)) :
     ∃ B : ℝ, ∀ t, |∑ i, ∑ j, PureMicroscaleMetric κ ϕ t PhaseVorticityTensor i j| ≤ B := by
   
   -- Step 1: Initialize the network cardinality bounds using native matrix trace size
@@ -1256,7 +1256,7 @@ theorem pmad_micro_censorship_alltime_noisy
 
   -- Step 6: Formulate the universal witness bound B absorbing the global noise footprint
   let MacroBound := 1 + ((2 * R_ϕ * |r| + R_Q^2) / δ)
-  let NoiseFloor := R_Q^2 * (4 * B_noise * T)
+  let NoiseFloor := R_Q^2 * (B_noise * T)
   let B_val := MacroBound + NoiseFloor
   use B_val
   intro t
@@ -1347,7 +1347,7 @@ theorem pmad_micro_censorship_of_regime
     reg.h_arnold_tongue reg.h_vorticity_equilibrium reg.h_emergence_envelope
 
 /-- CLV-Coupled Noisy Singularity Censorship Theorem:
-Combines the noisy microscale fluctuation envelope `R_Q^2 * (4 * B_noise * T)` with a
+Combines the noisy microscale fluctuation envelope `R_Q^2 * (B_noise * T)` with a
 verified `CovariantTangentSplitting κ ϕ lambda_s` (`lambda_s < 0`), replacing the
 hardcoded `-1` rate with the true CLV contraction exponent and certifying that both
 the noisy microscale sum and the CLV-regularized spacetime metric remain bounded
@@ -1549,7 +1549,7 @@ theorem derived_vorticity_to_cluster_bridge
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     -- The Core Squeeze Hypothesis
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     -- The Constitutive Handshake
     (h_seed_correspondence : (seed.B_matrix i j : ℝ) = (κ i j * AmplitudeWeight c i j) / (Fintype.card N : ℝ)^2) :
     Tendsto (fun (T : ℝ) => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2)
@@ -1562,7 +1562,7 @@ theorem derived_vorticity_to_cluster_bridge
   let ErrorFunc := fun T : ℝ => (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2 -
                                 (κ i j * AmplitudeWeight c i j) / (Fintype.card N : ℝ)^2
 
-  have h_error_bound : ∀ (T : ℝ), 0 < T → |ErrorFunc T| ≤ (|κ i j| / (Fintype.card N : ℝ)^2) * (4 * B T * T) := by
+  have h_error_bound : ∀ (T : ℝ), 0 < T → |ErrorFunc T| ≤ (|κ i j| / (Fintype.card N : ℝ)^2) * (B T * T) := by
     intro T hT
     dsimp [ErrorFunc]
     have h_factor : (κ i j * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i j T) / (Fintype.card N : ℝ)^2 -
@@ -1584,7 +1584,7 @@ theorem derived_vorticity_to_cluster_bridge
   -- 3. Run the topological squeeze over the vanishing neighborhood filter
   rw [tendsto_iff_norm_sub_tendsto_zero]
 
-  have h_limit_ceiling : Tendsto (fun (T : ℝ) => (|κ i j| / (Fintype.card N : ℝ)^2) * (4 * B T * T)) atTop (𝓝 0) := by
+  have h_limit_ceiling : Tendsto (fun (T : ℝ) => (|κ i j| / (Fintype.card N : ℝ)^2) * (B T * T)) atTop (𝓝 0) := by
     have h_const : Tendsto (fun (_T : ℝ) => |κ i j| / (Fintype.card N : ℝ)^2) atTop (𝓝 (|κ i j| / (Fintype.card N : ℝ)^2)) := tendsto_const_nhds
     have h_final := Tendsto.mul h_const h_noise_squeeze
     rw [mul_zero] at h_final
@@ -1595,7 +1595,7 @@ theorem derived_vorticity_to_cluster_bridge
     filter_upwards [] with T
     exact norm_nonneg _
 
-  have h_upper : ∀ᶠ (T : ℝ) in atTop, ‖ErrorFunc T‖ ≤ (|κ i j| / (Fintype.card N : ℝ)^2) * (4 * B T * T) := by
+  have h_upper : ∀ᶠ (T : ℝ) in atTop, ‖ErrorFunc T‖ ≤ (|κ i j| / (Fintype.card N : ℝ)^2) * (B T * T) := by
     filter_upwards [eventually_gt_atTop (0 : ℝ)] with T hT
     have h_cell_bound := h_error_bound T hT
     dsimp [ErrorFunc] at h_cell_bound ⊢
@@ -1619,7 +1619,7 @@ theorem derived_vorticity_to_cluster_sign_bridge
     (θ : N → ℝ) (c : N → ℂ)
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     (h_seed_correspondence : (seed.B_matrix i j : ℝ) = (κ i j * AmplitudeWeight c i j) / (Fintype.card N : ℝ)^2) :
 
     (seed.B_matrix i j > 0 →
@@ -1653,7 +1653,7 @@ theorem pmad_uniform_positive_channel_implies_seed_positive
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
     (h_noise_squeeze :
-      Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+      Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     (h_seed_corr_ik :
       (seed.B_matrix i k : ℝ) =
         (κ i k * AmplitudeWeight c i k) /
@@ -1681,7 +1681,7 @@ theorem pmad_realizes_local_acyclic_channel
     (seed : ClusterSeed N) (k i j : N) (θ : N → ℝ) (c : N → ℂ)
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     -- Dynamical positivity: each physical channel is eventually bounded below by a fixed strictly positive constant.
     (h_uniform_ik : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
       ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i k T) / (Fintype.card N : ℝ)^2)
@@ -1748,7 +1748,7 @@ theorem pmad_realizes_mutation_scale_bound
     (θ : N → ℝ) (c : N → ℂ)
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     (h_uniform_ik : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
       ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i k T) / (Fintype.card N : ℝ)^2)
     (h_uniform_kj : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
@@ -1848,7 +1848,7 @@ theorem pmad_realizes_mutation_increment
     (θ : N → ℝ) (c : N → ℂ)
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     (h_uniform_ik : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
       ε ≤ (κ i k * MacroscopicBornProbability ϕ ω κ ξ (B T) (reg T).h_flow i k T) / (Fintype.card N : ℝ)^2)
     (h_uniform_kj : ∃ ε : ℝ, 0 < ε ∧ ∀ᶠ T : ℝ in atTop,
@@ -2072,7 +2072,7 @@ theorem pmad_realizes_eventual_sign_along_path
     (θ : N → ℝ) (c : N → ℂ)
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2) :
 
     ((mutate_seed_seq seed path).B_matrix a b > 0 →
@@ -2318,7 +2318,7 @@ theorem pmad_drives_extended_g_matrix_transport
     (seed : ClusterSeed N) (θ : N → ℝ) (c : N → ℂ)
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2)
     (h_C_convergence : ∀ u v : N, Tendsto (fun T => C_seq T u v) atTop (𝓝 (seed_C u v)))
     (h_G_convergence : ∀ u v : N, Tendsto (fun T => G_seq T u v) atTop (𝓝 (seed_G u v))) :
@@ -2358,7 +2358,7 @@ theorem pmad_realizes_exchange_graph_morphism
     (seed : ClusterSeed N) (θ : N → ℝ) (c : N → ℂ)
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2)
     (h_C_convergence : ∀ u v : N, Tendsto (fun T => C_seq T u v) atTop (𝓝 (seed_C u v)))
     (h_G_convergence : ∀ u v : N, Tendsto (fun T => G_seq T u v) atTop (𝓝 (seed_G u v))) :
@@ -2416,7 +2416,7 @@ theorem pmad_morphism_respects_path_concatenation
     (seed : ClusterSeed N) (θ : N → ℝ) (c : N → ℂ)
     (B : ℝ → ℝ)
     (reg : ∀ T : ℝ, ResonantPhaseRegime ϕ ω κ ξ (B T) c θ)
-    (h_noise_squeeze : Tendsto (fun T : ℝ => 4 * B T * T) atTop (𝓝 0))
+    (h_noise_squeeze : Tendsto (fun T : ℝ => B T * T) atTop (𝓝 0))
     (h_seed_corr_global : ∀ u v : N, (seed.B_matrix u v : ℝ) = (κ u v * AmplitudeWeight c u v) / (Fintype.card N : ℝ)^2)
     (h_C_convergence : ∀ u v : N, Tendsto (fun T => C_seq T u v) atTop (𝓝 (seed_C u v)))
     (h_G_convergence : ∀ u v : N, Tendsto (fun T => G_seq T u v) atTop (𝓝 (seed_G u v))) :

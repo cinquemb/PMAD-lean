@@ -68,7 +68,7 @@ omit [DecidableEq N] in
     Rather than postulating an unconstrained reduction, this acts as a conditional 
     stability pipeline: it demonstrates that if an identification hypothesis (`h_physlib_match`) 
     holds at the boundary, a primitive, continuous real-valued noise ceiling (`B`) will drive a 
-    strictly linear deviation (`≤ 4 * B * T`) from the expected state amplitudes over a 
+    strictly linear deviation (`≤ B * T`) from the expected state amplitudes over a 
     finite-time interaction interval (`T`). -/
 theorem physlib_quantum_probability_general_bridge
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
@@ -77,7 +77,7 @@ theorem physlib_quantum_probability_general_bridge
     (T : ℝ) (hT : 0 < T)
     (ψ : Ket N) (h_physlib_match : AmplitudeWeight c i j = (Complex.normSq (ψ i) : ℝ)) :
 
-    |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - (Complex.normSq (ψ i) : ℝ)| ≤ 4 * B * T := by
+    |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - (Complex.normSq (ψ i) : ℝ)| ≤ B * T := by
   rw [← h_physlib_match]
   exact born_rule_noise_degradation_of_regime reg i j T hT
 
@@ -127,7 +127,7 @@ theorem physlib_off_diagonal_decoherence_bound
     (T : ℝ) (hT : 0 < T)
     (ψ : Ket N) (h_physlib_match : AmplitudeWeight c i j = (ψ i * star (ψ j)).re) :
 
-    |(MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T) - (ψ i * star (ψ j)).re| ≤ 4 * B * T := by
+    |(MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T) - (ψ i * star (ψ j)).re| ≤ B * T := by
   -- 1. Align the cross-mode coordinate projection with PMAD physical match
   rw [← h_physlib_match]
 
@@ -140,6 +140,7 @@ theorem physlib_off_diagonal_decoherence_bound
 
   -- 3. Apply the single-regime FTC noise degradation bound
   exact born_rule_noise_degradation_of_regime reg i j T hT
+
 
 omit [DecidableEq N] in
 /-- CHANNEL EVALUATION SPECIFICATION
@@ -196,7 +197,7 @@ omit [DecidableEq N] in
     Uses a clean triangle inequality split and a 
     normalized coordinate amplitude constraint (`h_normalized_intensity`) to prove that 
     the combined trajectory drift and channel relaxation error remains strictly bounded 
-    within the total non-equilibrium horizon envelope (≤ 8 * B * T). -/
+    within the total non-equilibrium horizon envelope (≤ 2 * B * T). -/
 theorem pmad_flow_tracks_bundled_cptp_output
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
     (i j : N) (hij : i ≠ j) (θ : N → ℝ) (c : N → ℂ)
@@ -205,14 +206,14 @@ theorem pmad_flow_tracks_bundled_cptp_output
     (ψ : Ket N) (h_physlib_match : AmplitudeWeight c i j = (ψ i * star (ψ j)).re)
     (γ : ℝ) (h_bound : Real.exp (-γ * T) ≤ 1) (h_pos : 0 ≤ Real.exp (-γ * T))
     -- The channel actively decays, bounded tightly by the noise ceiling
-    (h_decay : |Real.exp (-γ * T) - 1| ≤ 4 * B * T)
+    (h_decay : |Real.exp (-γ * T) - 1| ≤ B * T)
     (ρ : MState (Fin 2))
     (h_ρ_init : ρ.m 0 1 = ψ i * star (ψ j))
     -- Normalization condition: The local cross-mode state amplitude intensity is bounded within the unit disc
     (h_normalized_intensity : |(ψ i * star (ψ j)).re| ≤ 1) :
 
     |(MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T) -
-     ((bundledPmadPhaseDampingChannel γ T h_bound h_pos ρ).m 0 1).re| ≤ 8 * B * T := by
+     ((bundledPmadPhaseDampingChannel γ T h_bound h_pos ρ).m 0 1).re| ≤ 2 * B * T := by
 
   -- 1. Apply the triangle inequality to split the tracking error across the pure state invariant
   have h_triangle := abs_sub_le (MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T)
@@ -221,11 +222,11 @@ theorem pmad_flow_tracks_bundled_cptp_output
   refine le_trans h_triangle ?_
 
   -- 2. Isolate and bind the first component (Trajectory-to-Pure-State tracking drift)
-  have h_trajectory_drift : |(MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T) - (ψ i * star (ψ j)).re| ≤ 4 * B * T := by
+  have h_trajectory_drift : |(MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T) - (ψ i * star (ψ j)).re| ≤ B * T := by
     exact physlib_off_diagonal_decoherence_bound ϕ ω κ ξ B i j hij θ c reg T hT ψ h_physlib_match
 
   -- 3. Isolate and evaluate the second component (Pure-State-to-Kraus-Channel relaxation damping)
-  have h_channel_relaxation : |(ψ i * star (ψ j)).re - ((bundledPmadPhaseDampingChannel γ T h_bound h_pos ρ).m 0 1).re| ≤ 4 * B * T := by
+  have h_channel_relaxation : |(ψ i * star (ψ j)).re - ((bundledPmadPhaseDampingChannel γ T h_bound h_pos ρ).m 0 1).re| ≤ B * T := by
     rw [bundled_pmad_channel_evaluation γ T h_bound h_pos ρ]
     rw [h_ρ_init]
 
@@ -268,7 +269,7 @@ theorem pmad_flow_tracks_bundled_cptp_output
     refine le_trans h_root_contract ?_
     exact h_decay
 
-  -- 4. Linearly aggregate the independent non-equilibrium error parameters (4BT + 4BT = 8BT)
+  -- 4. Linearly aggregate the independent non-equilibrium error parameters (BT + BT = 2BT)
   linarith
 
 

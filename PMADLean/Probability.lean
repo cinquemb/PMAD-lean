@@ -450,7 +450,7 @@ omit [DecidableEq N] in
     Rigorously bridges the primitive physical noise parameters directly to the final bound.
     Proves that for perfectly matched quasienergies subject to a bounded microscopic noise field, 
     the total physical tracking variance is strictly upper-bounded by a quantitative error tolerance
-    parameterized explicitly as ε(T, B) = 4 * B * T over finite horizons. 
+    parameterized explicitly as ε(T, B) = B * T over finite horizons. 
     Dynamic trajectory evolution step is derived internally 
     by nesting the Fundamental Theorem of Calculus (FTC) -/
 
@@ -471,8 +471,8 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
     (T : ℝ) (hT : 0 < T) :
     IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) volume 0 T →
+    |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ B * T := by
 
-    |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
   intro h_integrable
   
   -- Step 1: Instantiate the trapping envelope from the dynamics core
@@ -579,7 +579,7 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
   let ConstVal := exp (I * ((θ i : ℂ) - (θ j : ℂ)))
 
   -- Force-align the target goal using the abstract variables instead of unfolding definitions
-  change |(PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T).re - AmplitudeWeight c i j| ≤ 4 * B * T
+  change |(PhaseOverlapFunctional ϕ ω κ ξ B h_flow i j T).re - AmplitudeWeight c i j| ≤ B * T
   unfold PhaseOverlapFunctional
   rw [← h_weight_match]
   
@@ -600,101 +600,122 @@ theorem born_rule_noise_degradation_bound_derive_ftc_evolution
     rw [h_norm_T, abs_of_pos hT]
   rw [h_norm_factor]
 
-  -- Step 5: DERIVE the uniform tracking bound directly from the integrated primitive ODE inputs
-  have h_derived_noise_bound : ∀ t ∈ Set.Ioc 0 T, ‖exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ))) - exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ ≤ 4 * B * T := by
+  -- Step 5: DERIVE the sharp pointwise tracking bound `≤ 2 * B * t` directly from the integrated primitive ODE inputs
+  have h_derived_noise_bound : ∀ t ∈ Set.Ioc 0 T, ‖exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ))) - exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ ≤ 2 * B * t := by
     intro t ht
     have h_t_pos := ht.1
-    have h_t_le_T := ht.2
-    
+
     -- Force-align the target goal notation definitionally past the distributed casting
     have h_notation_align : ‖exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ))) - exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ = ‖exp (I * (((ϕ t i : ℝ) - (ϕ t j : ℝ)) : ℂ)) - exp (I * (((θ i : ℝ) - (θ j : ℝ)) : ℂ))‖ := by
       congr 1
     rw [h_notation_align]
-    
-    -- Deconstruct Euler's formula completely to expand the complex norm via real trigonometric metrics
-    have h_trig_split (A B C D : ℝ) : ‖exp (I * (↑A - ↑B)) - exp (I * (↑C - ↑D))‖ ≤ |Real.cos (A - B) - Real.cos (C - D)| + |Real.sin (A - B) - Real.sin (C - D)| := by
-      -- Commute multiplication to match Mathlib 4's canonical cexp (↑x * I) Euler signature
-      have h_comm_A : I * (↑A - ↑B) = ↑(A - B) * I := by push_cast; ring
-      have h_comm_B : I * (↑C - ↑D) = ↑(C - D) * I := by push_cast; ring
-      rw [h_comm_A, h_comm_B, Complex.exp_mul_I, Complex.exp_mul_I]
-      -- Group real parts and imaginary parts manually matching postfix target expression exactly
-      change ‖(Complex.cos ((A - B : ℝ) : ℂ) + Complex.sin ((A - B : ℝ) : ℂ) * I) - (Complex.cos ((C - D : ℝ) : ℂ) + Complex.sin ((C - D : ℝ) : ℂ) * I)‖ ≤ |Real.cos (A - B) - Real.cos (C - D)| + |Real.sin (A - B) - Real.sin (C - D)|
-      have h_geom : (Complex.cos ((A - B : ℝ) : ℂ) + Complex.sin ((A - B : ℝ) : ℂ) * I) - (Complex.cos ((C - D : ℝ) : ℂ) + Complex.sin ((C - D : ℝ) : ℂ) * I) =
-                    Complex.ofReal (Real.cos (A - B) - Real.cos (C - D)) + I * Complex.ofReal (Real.sin (A - B) - Real.sin (C - D)) := by
-        push_cast; ring
-      rw [h_geom]
-      -- Standard complex inequality projection: ‖x + I*y‖ ≤ ‖x‖ + ‖I*y‖ via norm_add_le
-      have h_tri_c := norm_add_le (Complex.ofReal (Real.cos (A - B) - Real.cos (C - D))) (I * Complex.ofReal (Real.sin (A - B) - Real.sin (C - D)))
-      refine le_trans h_tri_c ?_
-      rw [norm_mul, norm_I, one_mul, Complex.norm_real, Complex.norm_real]
-      rw [Real.norm_eq_abs, Real.norm_eq_abs]
-      
-    have h_split_step := h_trig_split (ϕ t i) (ϕ t j) (θ i) (θ j)
-    refine le_trans h_split_step ?_
-    
-    -- Pipe the decoupled components directly through real calculus constants
-    have h_cos_lip := Real.abs_cos_sub_cos_le (ϕ t i - ϕ t j) (θ i - θ j)
-    have h_sin_lip := Real.abs_sin_sub_sin_le (ϕ t i - ϕ t j) (θ i - θ j)
-    have h_combined_lip : |Real.cos (ϕ t i - ϕ t j) - Real.cos (θ i - θ j)| + |Real.sin (ϕ t i - ϕ t j) - Real.sin (θ i - θ j)| ≤ 2 * |ϕ t i - ϕ t j - (θ i - θ j)| := by
-      linarith
-    refine le_trans h_combined_lip ?_
-    
-    -- FIX: Feed the local witness `h_t_pos` directly into the forward domain tracker to fulfill the guard condition
+
+    -- Chord-to-arc bound on the unit circle: ‖exp(iα) - exp(iβ)‖ ≤ |α - β|
+    have h_arc_bound (α β : ℝ) : ‖exp (I * (α : ℂ)) - exp (I * (β : ℂ))‖ ≤ |α - β| := by
+      have h_factor : exp (I * (α : ℂ)) - exp (I * (β : ℂ)) =
+          exp (I * (β : ℂ)) * (exp (I * ((α - β : ℝ) : ℂ)) - 1) := by
+        rw [mul_sub, mul_one, ← Complex.exp_add]
+        congr 2
+        push_cast
+        ring
+      rw [h_factor, norm_mul]
+      have h_comm_b : I * (β : ℂ) = (β : ℂ) * I := mul_comm _ _
+      rw [h_comm_b, Complex.norm_exp_ofReal_mul_I, one_mul]
+      -- Prove ‖exp(I * x) - 1‖ ≤ |x| via FTC on s ↦ exp(I * s) from 0 to x
+      let x : ℝ := α - β
+      have h_ftc_arc : exp (I * (x : ℂ)) - 1 = ∫ s in (0)..x, (I * exp (I * (s : ℂ))) := by
+        have h_deriv : ∀ s ∈ Set.uIcc (0 : ℝ) x,
+            HasDerivAt (fun r : ℝ => exp (I * (r : ℂ))) (I * exp (I * (s : ℂ))) s := by
+          intro s _
+          have h1 : HasDerivAt (fun r : ℝ => (r : ℂ)) 1 s := Complex.ofRealCLM.hasDerivAt
+          have h2 : HasDerivAt (fun r : ℝ => I * (r : ℂ)) (I * 1) s := h1.const_mul I
+          rw [mul_one] at h2
+          simpa [mul_comm] using h2.cexp
+        have h_int : IntervalIntegrable (fun s : ℝ => I * exp (I * (s : ℂ))) volume 0 x := by
+          apply Continuous.intervalIntegrable; fun_prop
+        have h_eval := intervalIntegral.integral_eq_sub_of_hasDerivAt h_deriv h_int
+        simp only [Complex.ofReal_zero, mul_zero, Complex.exp_zero] at h_eval
+        exact h_eval.symm
+      rw [h_ftc_arc]
+      have h_norm_int := intervalIntegral.norm_integral_le_abs_of_norm_le
+        (μ := volume) (a := 0) (b := x) (f := fun s : ℝ => I * exp (I * (s : ℂ))) (g := fun _ : ℝ => (1 : ℝ))
+        (ae_of_all _ fun s => by
+          rw [norm_mul, norm_I, one_mul]
+          have h_cs : I * (s : ℂ) = (s : ℂ) * I := mul_comm _ _
+          rw [h_cs, Complex.norm_exp_ofReal_mul_I])
+        intervalIntegrable_const
+      rw [intervalIntegral.integral_const, sub_zero, smul_eq_mul, mul_one] at h_norm_int
+      exact h_norm_int
+    have h_arc_inst := h_arc_bound (ϕ t i - ϕ t j) (θ i - θ j)
+    push_cast at h_arc_inst
+    refine le_trans h_arc_inst ?_
+
+
+    -- Feed the local witness `h_t_pos` directly into the forward domain tracker
     rw [h_ftc_evolution t h_t_pos, add_sub_cancel_left]
-    
+
     -- Cast standard real absolute inequality directly into a filter-ae bound layout for measure compliance
     have h_ae_bound : ∀ᵐ (s : ℝ) ∂volume, s ∈ Set.Ioc 0 t → ‖ξ s i - ξ s j‖ ≤ 2 * B := by
       apply ae_of_all
       intro s _
       rw [Real.norm_eq_abs]
       exact h_primitive_noise s
-      
+
     -- Use intervalIntegral.norm_integral_le_of_norm_le natively over Real space
     have h_int_le := intervalIntegral.norm_integral_le_of_norm_le (by linarith [h_t_pos]) h_ae_bound
     have h_le_final := h_int_le (continuous_const.intervalIntegrable 0 t)
-    
+
     -- Align absolute bars back into norm wrappers explicitly using Real.norm_eq_abs properties
     have h_abs_eq_norm : |∫ s in (0)..t, (ξ s i - ξ s j)| = ‖∫ s in (0)..t, (ξ s i - ξ s j)‖ := (Real.norm_eq_abs _).symm
     rw [h_abs_eq_norm]
-    refine le_trans (mul_le_mul_of_nonneg_left h_le_final (by positivity)) ?_
-    
+    refine le_trans h_le_final ?_
+
     -- Evaluate the upper integrated bounding volume natively
     have h_eval_const : ∫ _ in (0)..t, (2 * B) = t * (2 * B) := by
       rw [intervalIntegral.integral_const, sub_zero, smul_eq_mul]
     rw [h_eval_const]
-    
-    -- Unpack real variables carefully inside inequality boundaries so linarith can process the horizon footprint
-    have h_horizon : 2 * (t * (2 * B)) ≤ 4 * B * T := by
-      calc
-        2 * (t * (2 * B)) = (4 * B) * t := by ring
-        _ ≤ (4 * B) * T                 := mul_le_mul_of_nonneg_left h_t_le_T (by linarith [h_B])
-        _ = 4 * B * T                   := by ring
     linarith
 
-  -- Step 6: Execute continuous path tracking optimization via integral bounds over the norm vector
-  have h_integral_bound : ‖IntVal - T • ConstVal‖ ≤ T * (4 * B * T) := by
+
+  -- Step 6: Execute continuous path tracking optimization via integral bounds over `2 * B * t`
+  have h_integral_bound : ‖IntVal - T • ConstVal‖ ≤ T * (B * T) := by
     dsimp [IntVal, ConstVal]
     have h_const_int : T • exp (I * ((θ i : ℂ) - (θ j : ℂ))) = ∫ _ in (0)..T, exp (I * ((θ i : ℂ) - (θ j : ℂ))) := by
       rw [intervalIntegral.integral_const, sub_zero]
-    change ‖(∫ t in (0)..T, exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) - T • exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ ≤ T * (4 * B * T)
+    change ‖(∫ t in (0)..T, exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) - T • exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ ≤ T * (B * T)
     rw [h_const_int, ← intervalIntegral.integral_sub]
-    · have h_ae_bound : ∀ᵐ (t : ℝ) ∂volume, t ∈ Set.Ioc 0 T → ‖exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ))) - exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ ≤ 4 * B * T := by
+    · have h_ae_bound : ∀ᵐ (t : ℝ) ∂volume, t ∈ Set.Ioc 0 T → ‖exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ))) - exp (I * ((θ i : ℂ) - (θ j : ℂ)))‖ ≤ 2 * B * t := by
         apply ae_of_all
         intro t ht
         exact h_derived_noise_bound t ht
       have h_le := intervalIntegral.norm_integral_le_of_norm_le (by linarith [hT]) h_ae_bound
-      have h_eps_int : ∫ _ in (0)..T, (4 * B * T) = T * (4 * B * T) := by
-        rw [intervalIntegral.integral_const, sub_zero, smul_eq_mul]
+      have h_eps_int : ∫ t in (0)..T, (2 * B * t) = T * (B * T) := by
+        have h_deriv : ∀ t ∈ Set.uIcc (0 : ℝ) T, HasDerivAt (fun r : ℝ => B * r ^ 2) (2 * B * t) t := by
+          intro t _
+          have h_sq : HasDerivAt (fun r : ℝ => r ^ 2) (2 * t) t := by
+            have h_mul : HasDerivAt (fun r : ℝ => r * r) (1 * t + t * 1) t :=
+              (hasDerivAt_id t).mul (hasDerivAt_id t)
+            have h_eq_fn : (fun r : ℝ => r ^ 2) = (fun r : ℝ => r * r) := by
+              funext r; exact sq r
+            rw [h_eq_fn]
+            exact HasDerivAt.congr_deriv h_mul (by ring)
+          exact HasDerivAt.congr_deriv (h_sq.const_mul B) (by ring)
+        have h_int : IntervalIntegrable (fun t : ℝ => 2 * B * t) volume 0 T :=
+          (continuous_const.mul continuous_id').intervalIntegrable 0 T
+        have h_eval := intervalIntegral.integral_eq_sub_of_hasDerivAt h_deriv h_int
+        simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero, sub_zero] at h_eval
+        linarith
       rw [h_eps_int] at h_le
-      exact h_le (Continuous.intervalIntegrable continuous_const 0 T)
+      exact h_le ((continuous_const.mul continuous_id').intervalIntegrable 0 T)
     · exact h_integrable
     · exact Continuous.intervalIntegrable continuous_const 0 T
-      
-  -- Step 7: Cancel the time dimension to isolate the pure primitive boundary footprint
-  have h_final_calc : (1 / T) * ‖IntVal - T • ConstVal‖ ≤ (1 / T) * (T * (4 * B * T)) := by
+
+  -- Step 7: Cancel the time dimension to isolate the sharp `B * T` boundary footprint
+  have h_final_calc : (1 / T) * ‖IntVal - T • ConstVal‖ ≤ (1 / T) * (T * (B * T)) := by
     exact mul_le_mul_of_nonneg_left h_integral_bound (by positivity)
   refine le_trans h_final_calc ?_
   rw [← mul_assoc, one_div_mul_cancel (ne_of_gt hT), one_mul]
+
 
 omit [DecidableEq N] in
 /-- Single-Regime Wrapper for `born_rule_noise_degradation_bound_derive_ftc_evolution`:
@@ -707,7 +728,7 @@ theorem born_rule_noise_degradation_of_regime
     (reg : ResonantPhaseRegime ϕ ω κ ξ B c θ)
     (i j : N) (T : ℝ) (hT : 0 < T) :
 
-    |(PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T).re - AmplitudeWeight c i j| ≤ 4 * B * T :=
+    |(PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T).re - AmplitudeWeight c i j| ≤ B * T :=
   born_rule_noise_degradation_bound_derive_ftc_evolution
     ϕ ω κ ξ B reg.h_B reg.h_flow i j θ c
     (reg.h_amplitude i) (reg.h_amplitude j)

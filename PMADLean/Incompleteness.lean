@@ -170,7 +170,7 @@ theorem attractor_trajectory_to_metric_link
     -- Asymptotic Squeeze Hypothesis: The long-time exponential fluctuation has decayed below the compliance regularizer
     (h_asymptotic_squeeze : Real.exp (-1 * T) ≤ ε)
     -- Hypothesize the compliance metric regularization ceiling scales to control noise degradation bounds
-    (h_metric_ceiling : AmplitudeWeight c i j + 4 * B * T < ε + SeedEmergentMetric seed ε h_ε i i) :
+    (h_metric_ceiling : AmplitudeWeight c i j + B * T < ε + SeedEmergentMetric seed ε h_ε i i) :
     MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T < ε + SeedEmergentMetric seed ε h_ε i i := by
 
   -- 1. Explicitly reduce the custom stability predicate without triggering implicit transparency bugs
@@ -189,7 +189,7 @@ theorem attractor_trajectory_to_metric_link
   have h_probability_bound := born_rule_noise_degradation_of_regime (N := Nvis) reg i j T hT
 
   -- 5. Deconstruct the absolute value error boundaries via standard absolute sub identities
-  have h_upper_prob_bound : MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T ≤ AmplitudeWeight c i j + 4 * B * T := by
+  have h_upper_prob_bound : MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T ≤ AmplitudeWeight c i j + B * T := by
     unfold MacroscopicBornProbability
     have h_abs_split := abs_le.mp h_probability_bound
     linarith
@@ -231,14 +231,14 @@ theorem closed_loop_metric_backaction_fixed_point
         (metric_drive (SeedEmergentMetric seed ε h_ε)) i)
     (i j : Nvis) (θ : Nvis → ℝ) (c : Nvis → ℂ)
     (reg : ResonantPhaseRegime ϕ ω κ ξ B c θ)
-    (h_metric_ceiling : ∀ T > 0, AmplitudeWeight c i j + 4 * B * T < ε + SeedEmergentMetric seed ε h_ε i i) :
+    (h_metric_ceiling : ∀ T > 0, AmplitudeWeight c i j + B * T < ε + SeedEmergentMetric seed ε h_ε i i) :
     ∃ (A : Set (PhaseState Nvis)),
       ∃ (ϕ_active : Trajectory Nvis),
         (∀ lambda_bound ≤ (0 : ℝ), AttractorSet Nvis (fun ϕ' => IsPmadFlow ϕ' ω κ ξ B) A lambda_bound) ∧
         VisibleSubmanifoldEvolution (metric_drive (SeedEmergentMetric seed ε h_ε))
       (fun v => EmergentEffectiveForce (fun v' _ => dHint_dphi v' (metric_drive (SeedEmergentMetric seed ε h_ε)))
-        (metric_drive (SeedEmergentMetric seed ε h_ε)) v) (fun _ => 0) i + 4 * B * 1 =
-    (1 + ϕ_active 1 i) * metric_drive (SeedEmergentMetric seed ε h_ε) i + 4 * B * 1 := by
+        (metric_drive (SeedEmergentMetric seed ε h_ε)) v) (fun _ => 0) i + B * 1 =
+    (1 + ϕ_active 1 i) * metric_drive (SeedEmergentMetric seed ε h_ε) i + B * 1 := by
 
   -- 1. Call the heavy physical convergence engine from Dynamics.lean
   have h_engine := cluster_flow_converges_to_attractor ω κ ξ B seed h_envelope_trapping h_laurent_bounds

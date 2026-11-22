@@ -352,10 +352,10 @@ theorem stochastic_gradient_linearity
       IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N ∧
       executionStepCount cfg ≤ (1 / log 2 + 3) * log (cfg.N : ℝ) ∧
 
-      |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T := by
+      |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ B * T := by
 
   -- 1. Unify the core closed-loop noise integration via `ResonantPhaseRegime`
-  have h_probability_bound : |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ 4 * B * T :=
+  have h_probability_bound : |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ B * T :=
     born_rule_noise_degradation_of_regime reg i j T hT
 
   -- 2. Pull the global non-linear lattice convergence pass to resolve the complexity bounds
@@ -366,7 +366,7 @@ theorem stochastic_gradient_linearity
   have h_vel_check := mean_field_velocity_bounded cfg J h0 h1 h_J h_h0 h_h1 state_vec
   rcases h_vel_check with ⟨L_val, h_L_pos, _⟩
 
-  have _h_stochastic_interaction : L_val * |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ L_val * (4 * B * T) := by
+  have _h_stochastic_interaction : L_val * |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| ≤ L_val * (B * T) := by
     exact mul_le_mul_of_nonneg_left h_probability_bound h_L_pos
 
   -- 4. Definitively unpack the existential package correctly via obtain to seal the pass
