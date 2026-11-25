@@ -153,12 +153,12 @@ theorem spiral_shor_like_subexponential_bound (cfg : SpiralAlgoConfig) :
     indexing node type `M` to a 1D discrete sampling array (`TimeSeriesSample`). -/
 theorem pmad_trajectory_discretization_bridge
     {M : Type*} [Fintype M] (ϕ : Trajectory M) (ω : M → ℝ) (κ : M → M → ℝ) (ξ : ℝ → M → ℝ) (B : ℝ)
-    (_h_flow : IsPmadFlow ϕ ω κ ξ B) (i : M) (Δt : ℝ) (h_Δt : 0 ≤ Δt) (L : ℝ) (h_L : 0 ≤ L)
+    (_h_flow : IsPmadFlow ϕ ω κ ξ B) (i : M) (Δt : ℝ) (L : ℝ) (h_L : 0 ≤ L)
     (h_lip : ∀ t₁ t₂, |ϕ t₁ i - ϕ t₂ i| ≤ L * |t₁ - t₂|)
     (n : ℕ) (t : ℝ) (h_interval : t ∈ Set.Icc ((n : ℝ) * Δt) (((n + 1 : ℕ) : ℝ) * Δt)) :
-    
     |ϕ t i - TimeSeriesSample (fun t' => ϕ t' i) Δt n| ≤ L * Δt := by
-  exact data_pipeline_discretization_bound (fun t' => ϕ t' i) Δt h_Δt L h_L h_lip n t h_interval
+  exact data_pipeline_discretization_bound (fun t' => ϕ t' i) Δt L h_L h_lip n t h_interval
+
   
 /-- THE SYSTEM CONVERGENCE UNIFICATION THEOREM (The C-Theorem Variant):
     links discrete execution loop parameters directly to the 
@@ -166,20 +166,21 @@ theorem pmad_trajectory_discretization_bridge
     Proves that the dimensionality of un-converged states tracks the step bound. -/
 theorem pmad_rg_attractor_convergence_time
     {M : Type*} [DecidableEq M] [Fintype M] (cfg : SpiralAlgoConfig)
-    (ω : M → ℝ) (κ : M → M → ℝ) (ξ : ℝ → M → ℝ) (B : ℝ)
+    (ω : M → ℝ) (κ : M → M → ℝ) (ξ : ℝ → M → ℝ) (B lambda_phys : ℝ)
     (μ_spectrum : M → ℝ) (Ω₁ Ω₂ : ℝ) (h_Ω₁ : 0 < Ω₁) (h_step : Ω₁ ≤ Ω₂) 
     (lambda_max : ℝ → ℝ) (h_stable : IsAdmissibleAttractor lambda_max)
     
     -- Matches the updated physical spectral contraction bridge:
     (h_spectral_contraction : ∀ (ϕ' : Trajectory M), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
+      ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+        ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
     
     AttractorDimensionality μ_spectrum Ω₂ ≤ (Fintype.card M : ℝ) ∧ 
     AttractorDimensionality μ_spectrum Ω₂ ≤ AttractorDimensionality μ_spectrum Ω₁ ∧
     IsSubExponentiallyBounded (fun _ => executionStepCount cfg) cfg.N := by
   
   -- 1. Construct the physical bridge using the updated signature
-  have h_attractor := pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
+  have h_attractor := pmad_flow_converges_to_attractor ω κ ξ B lambda_phys h_spectral_contraction
                         
   -- 2. Clear the existential quantifier using obtain to introduce fresh variables safely
   obtain ⟨AttractorField, _h_field_converges⟩ := h_attractor
@@ -188,8 +189,6 @@ theorem pmad_rg_attractor_convergence_time
   exact ⟨dynamics_to_renormalization_capacity_bound μ_spectrum Ω₂ lambda_max h_stable, 
          rg_flow_c_theorem_analog μ_spectrum Ω₁ Ω₂ h_Ω₁ h_step, 
          spiral_shor_like_subexponential_bound cfg⟩
-
-
 
 
 /-- THE GRADIENT DESCENT LINEAR COMPLETION THEOREM:

@@ -867,21 +867,13 @@ theorem complex_norm_error_bound_single_slot
     (h_imag_locked : (PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j).im = 0) :
 
     ‖PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)‖ ≤ B * T := by
+  -- Step 1: Call `born_rule_noise_degradation_of_regime` to extract the real pointwise error boundary
+  have h_real_physics := born_rule_noise_degradation_of_regime reg i j T hT
 
-  -- Step 1: Call `born_rule_noise_degradation_bound_derive_ftc_evolution` to extract the real pointwise error boundary
-  have h_real_physics := born_rule_noise_degradation_bound_derive_ftc_evolution
-    ϕ ω κ ξ B reg.h_B reg.h_flow i j θ c (reg.h_amplitude i) (reg.h_amplitude j) (reg.h_omega i j)
-    reg.h_spectral_contraction (fun t => pmad_flow_noise_diff_bound reg.h_flow t i j)
-    (reg.h_init i j) (fun t => reg.h_diff_integrable t i j) T hT
-    (pmad_flow_overlap_intervalIntegrable reg.h_flow i j T)
-
-  -- Step 2: Unfold the definition of MacroscopicBornProbability to align syntax layouts
-  have h_syntax_align : |MacroscopicBornProbability ϕ ω κ ξ B reg.h_flow i j T - AmplitudeWeight c i j| =
-
+  -- Step 2: Align the real projection subtraction layout
+  have h_syntax_align : |(PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T).re - AmplitudeWeight c i j| =
                         |(PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T - (AmplitudeWeight c i j : ℂ)).re| := by
-    unfold MacroscopicBornProbability
     rw [Complex.sub_re, Complex.ofReal_re]
-    
   rw [h_syntax_align] at h_real_physics
 
   -- Step 3: Invoke Bridge LEMMA 2 to lift the real boundary into the complex absolute norm

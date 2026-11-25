@@ -86,8 +86,16 @@ structure ResonantPhaseRegime
   h_flow : IsPmadFlow ϕ ω κ ξ B
   h_amplitude : ∀ i, c i = Complex.exp (Complex.I * (θ i : ℂ))
   h_omega : ∀ i j, ω i = ω j
-  h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
-    ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)
+  h_theta_sync : ∀ i j, θ i = θ j
+  h_dissipative_contract : ∃ lambda_phys ≤ (0 : ℝ),
+    (∀ t ≥ 0, ∀ (n1 n2 : N),
+      let Δ := ϕ t n1 - ϕ t n2
+      let Δ_dot := (ω n1 + ∑ k, κ n1 k * Real.sin (ϕ t k - ϕ t n1) + ξ t n1) -
+                   (ω n2 + ∑ k, κ n2 k * Real.sin (ϕ t k - ϕ t n2) + ξ t n2)
+      Δ * Δ_dot ≤ lambda_phys * Δ ^ 2) ∧
+    (∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
+      ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+        ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
   h_init : ∀ i j, ϕ 0 i - ϕ 0 j = θ i - θ j
   h_diff_integrable : ∀ t i j, IntervalIntegrable (fun s => ξ s i - ξ s j) MeasureTheory.volume 0 t
 
@@ -455,98 +463,52 @@ omit [DecidableEq N] in
     by nesting the Fundamental Theorem of Calculus (FTC) -/
 
 theorem born_rule_noise_degradation_bound_derive_ftc_evolution
-    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ) (h_B : 0 ≤ B)
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B lambda_phys : ℝ) (h_B : 0 ≤ B)
+    (h_lambda_phys : lambda_phys ≤ 0)
     (h_flow : IsPmadFlow ϕ ω κ ξ B)
     (i j : N) (θ : N → ℝ) (c : N → ℂ)
     (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
     (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
     (h_omega : ω i = ω j)
-    
+    (h_init_sync : ∀ n1 n2, ϕ 0 n1 = ϕ 0 n2)
+    (h_dissipative : ∀ t ≥ 0, ∀ (n1 n2 : N),
+      let Δ := ϕ t n1 - ϕ t n2
+      let Δ_dot := (ω n1 + ∑ k, κ n1 k * Real.sin (ϕ t k - ϕ t n1) + ξ t n1) -
+                   (ω n2 + ∑ k, κ n2 k * Real.sin (ϕ t k - ϕ t n2) + ξ t n2)
+      Δ * Δ_dot ≤ lambda_phys * Δ ^ 2)
     -- hypothesis: Spectral Contraction Bridge for physical trajectories
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
+      ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+        ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
 
     (h_primitive_noise : ∀ t, |ξ t i - ξ t j| ≤ 2 * B)
     (h_init : ϕ 0 i - ϕ 0 j = θ i - θ j)
     (h_diff_integrable : ∀ t, IntervalIntegrable (fun s => ξ s i - ξ s j) volume 0 t)
     (T : ℝ) (hT : 0 < T) :
     IntervalIntegrable (fun t => exp (I * ((ϕ t i : ℂ) - (ϕ t j : ℂ)))) volume 0 T →
+
     |MacroscopicBornProbability ϕ ω κ ξ B h_flow i j T - AmplitudeWeight c i j| ≤ B * T := by
 
   intro h_integrable
   
   -- Step 1: Instantiate the trapping envelope from the dynamics core
-  have h_manifold_trapped := pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
+  have h_manifold_trapped := pmad_flow_converges_to_attractor ω κ ξ B lambda_phys h_spectral_contraction
+  rcases h_manifold_trapped with ⟨A_core, hA_core⟩
+  have h_att_inst := hA_core lambda_phys ⟨le_rfl, h_lambda_phys⟩
   
-  -- Step 2: Restrict the coupling cancellation hypothesis to the forward dissipative timeline (t > 0)
-  have h_coupling_cancel : ∀ t > 0, (∑ k, κ i k * Real.sin ((ϕ t k) - (ϕ t i))) = (∑ k, κ j k * Real.sin ((ϕ t k) - (ϕ t j))) := by
+ -- Step 2: Derive coupling cancellation on A_gauge_orbit via `kuramoto_gauge_orbit_forward_invariant`
+  have h_all_sync : ∀ t ≥ 0, ∀ (n1 n2 : N), ϕ t n1 = ϕ t n2 :=
+    kuramoto_gauge_orbit_forward_invariant ω κ ξ B lambda_phys ϕ h_flow h_dissipative h_init_sync
+  have h_coupling_cancel : ∀ t > 0,
+      (∑ k, κ i k * Real.sin ((ϕ t k) - (ϕ t i))) = (∑ k, κ j k * Real.sin ((ϕ t k) - (ϕ t j))) := by
     intro t ht_pos
-    have h_sync : ∀ (n1 n2 : N), ϕ t n1 = ϕ t n2 := by
-      intro n1 n2
-      have h_abs_zero : |ϕ t n1 - ϕ t n2| = 0 := by
-        by_contra h_pos
-        have h_gt_zero : 0 < |ϕ t n1 - ϕ t n2| := lt_of_le_of_ne (abs_nonneg _) (Ne.symm h_pos)
-        
-        let log_val := Real.log |ϕ t n1 - ϕ t n2|
-        let L_bound := (|log_val| + 1) / t
-        let lambda_bound := -L_bound
-        
-        have h_lambda_le_zero : lambda_bound ≤ 0 := by
-          dsimp [lambda_bound, L_bound]
-          have h_div_nonneg : 0 ≤ (|log_val| + 1) / t := div_nonneg (by linarith [abs_nonneg log_val]) (le_of_lt ht_pos)
-          linarith
-          
-        have h_contract := h_spectral_contraction ϕ h_flow t ht_pos lambda_bound h_lambda_le_zero n1 n2
-        
-        have h_mul_cancel : lambda_bound * t = -(|log_val| + 1) := by
-          dsimp [lambda_bound, L_bound]
-          have h_cancel := div_mul_cancel₀ (|log_val| + 1) (ne_of_gt ht_pos)
-          linarith [h_cancel]
-          
-        rw [h_mul_cancel] at h_contract
-        
-        have h_log_bound : -(|log_val| + 1) < log_val := by
-          rcases le_or_gt 0 log_val with h_log_pos | h_log_neg
-          · linarith [abs_of_nonneg h_log_pos]
-          · have h_abs_val : |log_val| = -log_val := abs_of_neg h_log_neg
-            linarith
-            
-        have h_exp_bound := Real.exp_lt_exp.mpr h_log_bound
-        rw [Real.exp_log h_gt_zero] at h_exp_bound
-        
-        -- Properly consume h_manifold_trapped inside the active timeline to unify the attractor sheet bounds
-        rcases h_manifold_trapped with ⟨A_core, hA_core⟩
-        have h_att_inst := hA_core lambda_bound h_lambda_le_zero
-        unfold AttractorSet at h_att_inst
-        
-        -- have h_stable_token : IsDynamicallyStable lambda_bound := h_lambda_le_zero
-        -- rcases h_att_inst h_stable_token ϕ with ⟨App, h_open_App, h_inter_App, h_mono_App, h_trap_App⟩
-        
-        have h_stable_token : IsDynamicallyStable lambda_bound := h_lambda_le_zero
-        rcases h_att_inst h_stable_token ϕ h_flow with ⟨App, h_open_App, h_inter_App, h_mono_App, h_trap_App⟩
-
-        
-        have h_trapped_t := h_trap_App t ht_pos
-        rw [h_mul_cancel] at h_trapped_t
-        
-        exact lt_irrefl _ (lt_trans h_contract h_exp_bound)
-        
-      exact sub_eq_zero.mp (abs_eq_zero.mp h_abs_zero)
-      
     have h_left_zero : (∑ k, κ i k * Real.sin ((ϕ t k) - (ϕ t i))) = 0 := by
-      apply Finset.sum_eq_zero
-      intro k _
-      have h_diff_zero : ϕ t k - ϕ t i = 0 := sub_eq_zero.mpr (h_sync k i)
-      rw [h_diff_zero, Real.sin_zero, mul_zero]
-      
+      apply Finset.sum_eq_zero; intro k _
+      rw [sub_eq_zero.mpr (h_all_sync t (le_of_lt ht_pos) k i), Real.sin_zero, mul_zero]
     have h_right_zero : (∑ k, κ j k * Real.sin ((ϕ t k) - (ϕ t j))) = 0 := by
-      apply Finset.sum_eq_zero
-      intro k _
-      have h_diff_zero : ϕ t k - ϕ t j = 0 := sub_eq_zero.mpr (h_sync k j)
-      rw [h_diff_zero, Real.sin_zero, mul_zero]
-      
+      apply Finset.sum_eq_zero; intro k _
+      rw [sub_eq_zero.mpr (h_all_sync t (le_of_lt ht_pos) k j), Real.sin_zero, mul_zero]
     rw [h_left_zero, h_right_zero]
-
 
   -- Derive the FTC tracking step internally from physics primitives via `derive_ftc_evolution`
   have h_ftc_evolution := derive_ftc_evolution ϕ ω κ ξ B h_flow i j θ h_omega h_coupling_cancel h_init h_diff_integrable
@@ -728,11 +690,17 @@ theorem born_rule_noise_degradation_of_regime
     (reg : ResonantPhaseRegime ϕ ω κ ξ B c θ)
     (i j : N) (T : ℝ) (hT : 0 < T) :
 
-    |(PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T).re - AmplitudeWeight c i j| ≤ B * T :=
-  born_rule_noise_degradation_bound_derive_ftc_evolution
-    ϕ ω κ ξ B reg.h_B reg.h_flow i j θ c
+    |(PhaseOverlapFunctional ϕ ω κ ξ B reg.h_flow i j T).re - AmplitudeWeight c i j| ≤ B * T := by
+  obtain ⟨lambda_phys, h_lambda_phys, h_diss, h_spec⟩ := reg.h_dissipative_contract
+  have h_init_sync : ∀ n1 n2, ϕ 0 n1 = ϕ 0 n2 := by
+    intro n1 n2
+    have h1 := reg.h_init n1 n2
+    rw [reg.h_theta_sync n1 n2, sub_self] at h1
+    exact sub_eq_zero.mp h1
+  exact born_rule_noise_degradation_bound_derive_ftc_evolution
+    ϕ ω κ ξ B lambda_phys reg.h_B h_lambda_phys reg.h_flow i j θ c
     (reg.h_amplitude i) (reg.h_amplitude j)
-    (reg.h_omega i j) reg.h_spectral_contraction
+    (reg.h_omega i j) h_init_sync h_diss h_spec
     (fun t => pmad_flow_noise_diff_bound reg.h_flow t i j)
     (reg.h_init i j)
     (fun t => reg.h_diff_integrable t i j)
@@ -745,7 +713,7 @@ theorem born_rule_noise_degradation_of_regime
     error between the true continuous trajectory and its sampled data pipeline array 
     is bounded linearly by the time step grid resolution Δt. -/
 theorem data_pipeline_discretization_bound 
-    (ϕ : ℝ → ℝ) (Δt : ℝ) (_h_Δt : 0 ≤ Δt) (L : ℝ) (h_L : 0 ≤ L)
+    (ϕ : ℝ → ℝ) (Δt : ℝ) (L : ℝ) (h_L : 0 ≤ L)
     (h_lip : ∀ t₁ t₂, |ϕ t₁ - ϕ t₂| ≤ L * |t₁ - t₂|) 
     (n : ℕ) (t : ℝ) (h_interval : t ∈ Set.Icc ((n : ℝ) * Δt) (((n + 1 : ℕ) : ℝ) * Δt)) :
 

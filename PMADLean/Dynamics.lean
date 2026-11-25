@@ -182,14 +182,21 @@ noncomputable def laurent_state_evaluation (seed : ClusterSeed N) (ϕ : Trajecto
   let phase_norm := ∑ i, ((ϕ t i : ℝ) ^ 2)
   let evaluation_point := Real.exp (matrix_scale + phase_norm) + 1
   laurent_space_eval P evaluation_point
+  
+/-- Evaluate P as an actual Laurent polynomial at a positive scale `q > 0`,
+or bound by a fixed seed-dependent envelope without self-absorbing `‖ϕ(t)‖²`. -/
+noncomputable def laurent_seed_envelope (seed : ClusterSeed N) (P : LaurentPolynomial ℝ) : ℝ :=
+  let matrix_scale := ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2)
+  let q : ℝ := Real.exp matrix_scale + 1
 
-/-- A trajectory is Laurent shielded iff the continuous 
-    physical phase separation between any two nodes is strictly upper-bounded 
-    by the algebraic evaluation of a Laurent polynomial ring element over the state space. -/
+  |P.coeff.sum (fun n c => c * q ^ n)|
+
+/-- Uniform Laurent Shielding: a single polynomial `P` (or pair-indexed `P i j`)
+must bound the phase spread across ALL `t > 0`. -/
 def IsLaurentShielded (ϕ : Trajectory N) (seed : ClusterSeed N) : Prop :=
-  ∀ t > 0, ∀ i j, ∃ (P : LaurentPolynomial ℝ), 
+  ∃ (P : LaurentPolynomial ℝ), ∀ t > 0, ∀ i j,
 
-    |ϕ t i - ϕ t j| ≤ laurent_state_evaluation seed ϕ t P
+    |ϕ t i - ϕ t j| ≤ laurent_seed_envelope seed P
 
 /-- Section VII: A trajectory satisfies Class I/II stability rules iff its continuous
     phase flow remains strictly inside the Arnold tongue synchronization wells managed 
@@ -306,6 +313,158 @@ structure CovariantTangentSplitting
   /-- Exponential contraction of squared Euclidean norm along `E^s` -/
   stable_contract : ∀ v, IsVariationalSolution κ ϕ v → v 0 ∈ E_s 0 →
     ∀ t ≥ 0, (∑ i : N, (v t i) ^ 2) ≤ (∑ i : N, (v 0 i) ^ 2) * Real.exp (2 * lambda_s * t)
+
+/-- Asymmetric coupling on an arbitrary finite network `N` with three distinct nodes
+`i₀, i₁, i₂`, inducing non-normal shear on `span {e_{i₀}, e_{i₁}, e_{i₂}}`. -/
+def shearedCoupling (i₀ i₁ i₂ : N) (a b : N) : ℝ :=
+  if a = i₀ ∧ b = i₂ then 2
+  else if a = i₁ ∧ b = i₀ then 1
+  else if a = i₁ ∧ b = i₂ then -2
+  else 0
+
+/-- Stationary zero trajectory on `N`. -/
+def shearedTrajectory (N : Type*) : Trajectory N := fun _ _ => 0
+
+/-- Zero natural quasienergies on `N`. -/
+def shearedOmega (N : Type*) : N → ℝ := fun _ => 0
+
+/-- Zero noise field on `N`. -/
+def shearedNoise (N : Type*) : ℝ → N → ℝ := fun _ _ => 0
+
+/-- Stable CLV eigenvector `v_s = 3 e_{i₀} - e_{i₁}` with eigenvalue `-2`. -/
+def shearedStableVec (i₀ i₁ : N) (a : N) : ℝ :=
+  if a = i₀ then 3 else if a = i₁ then -1 else 0
+
+/-- Unstable CLV eigenvector `v_u = e_{i₁}` with eigenvalue `+1`. -/
+def shearedUnstableVec (i₁ : N) (a : N) : ℝ :=
+  if a = i₁ then 1 else 0
+
+/-- `shearedTrajectory N` satisfies `IsPmadFlow` with noise bound `B = 0`. -/
+theorem shearedTrajectory_is_pmad_flow (i₀ i₁ i₂ : N) :
+    IsPmadFlow (shearedTrajectory N) (shearedOmega N) (shearedCoupling i₀ i₁ i₂) (shearedNoise N) 0 := by
+  refine ⟨fun _ _ => by simp [shearedNoise], fun t i => ?_⟩
+  have h_rhs :
+      shearedOmega N i +
+        ∑ j : N, shearedCoupling i₀ i₁ i₂ i j * Real.sin (shearedTrajectory N t j - shearedTrajectory N t i) +
+        shearedNoise N t i = 0 := by
+    simp [shearedOmega, shearedTrajectory, shearedNoise]
+  rw [h_rhs]
+  simpa [shearedTrajectory] using (hasDerivAt_const t (0 : ℝ))
+
+/-- Exact entrywise formula for `KuramotoJacobian` under `shearedCoupling` and `shearedTrajectory`:
+`J_{a, b}` is `-2` at `(i₀, i₀)`, `2` at `(i₀, i₂)`, `1` at `(i₁, i₀)`, `1` at `(i₁, i₁)`,
+`-2` at `(i₁, i₂)`, and `0` everywhere else. -/
+lemma sheared_jacobian_apply (i₀ i₁ i₂ : N)
+    (h01 : i₀ ≠ i₁) (h02 : i₀ ≠ i₂) (h12 : i₁ ≠ i₂) (t : ℝ) (a b : N) :
+    KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) t a b =
+      if a = i₀ then
+        if b = i₀ then -2 else if b = i₂ then 2 else 0
+      else if a = i₁ then
+        if b = i₀ then 1 else if b = i₁ then 1 else if b = i₂ then -2 else 0
+      else 0 := by
+  unfold KuramotoJacobian
+  simp only [shearedTrajectory, sub_self, Real.cos_zero, mul_one]
+  by_cases hab : a = b
+  · subst b
+    rw [if_pos rfl]
+    by_cases ha0 : a = i₀
+    · rw [ha0, if_pos rfl, if_pos rfl]
+      have h_sum : ∑ k ∈ Finset.univ.erase i₀, shearedCoupling i₀ i₁ i₂ i₀ k = 2 := by
+        rw [Finset.sum_eq_single i₂]
+        · simp [shearedCoupling]
+        · intro k _ hk2
+          simp [shearedCoupling, h01, hk2]
+        · intro h_not_mem
+          exact absurd (Finset.mem_erase.mpr ⟨h02.symm, Finset.mem_univ i₂⟩) h_not_mem
+      rw [h_sum]
+    · rw [if_neg ha0, if_neg ha0]
+      by_cases ha1 : a = i₁
+      · rw [ha1, if_pos rfl, if_pos rfl]
+        have h_sum : ∑ k ∈ Finset.univ.erase i₁, shearedCoupling i₀ i₁ i₂ i₁ k = -1 := by
+          rw [← Finset.add_sum_erase _ _ (Finset.mem_erase.mpr ⟨h01, Finset.mem_univ i₀⟩)]
+          have h_rest : ∑ k ∈ (Finset.univ.erase i₁).erase i₀, shearedCoupling i₀ i₁ i₂ i₁ k = -2 := by
+            rw [Finset.sum_eq_single i₂]
+            · simp [shearedCoupling, h01.symm, h02.symm]
+            · intro k hk hk2
+              have hk0 : k ≠ i₀ := (Finset.mem_erase.mp hk).1
+              simp [shearedCoupling, h01.symm, hk0, hk2]
+            · intro h_not_mem
+              exact absurd (Finset.mem_erase.mpr ⟨h02.symm, Finset.mem_erase.mpr ⟨h12.symm, Finset.mem_univ i₂⟩⟩) h_not_mem
+          rw [h_rest]
+          simp [shearedCoupling, h01.symm]
+          norm_num
+        rw [h_sum]
+        norm_num
+      · rw [if_neg ha1]
+        have h_sum : ∑ k ∈ Finset.univ.erase a, shearedCoupling i₀ i₁ i₂ a k = 0 := by
+          apply Finset.sum_eq_zero
+          intro k _
+          simp [shearedCoupling, ha0, ha1]
+        rw [h_sum, neg_zero]
+  · rw [if_neg hab]
+    by_cases ha0 : a = i₀
+    · rw [ha0] at hab ⊢
+      rw [if_pos rfl, if_neg (Ne.symm hab)]
+      by_cases hb2 : b = i₂
+      · rw [hb2]; simp [shearedCoupling]
+      · simp [shearedCoupling, h01, hb2]
+    · rw [if_neg ha0]
+      by_cases ha1 : a = i₁
+      · rw [ha1] at hab ⊢
+        rw [if_pos rfl, if_neg (Ne.symm hab)]
+        by_cases hb0 : b = i₀
+        · rw [hb0]; simp [shearedCoupling, h01.symm]
+        · rw [if_neg hb0]
+          by_cases hb2 : b = i₂
+          · rw [hb2]; simp [shearedCoupling, h01.symm, h02.symm]
+          · simp [shearedCoupling, h01.symm, hb0, hb2]
+      · rw [if_neg ha1]
+        simp [shearedCoupling, ha0, ha1]
+
+/-- `shearedStableVec` is an exact eigenvector of `KuramotoJacobian` with eigenvalue `-2`. -/
+lemma sheared_jacobian_stable_eigen (i₀ i₁ i₂ : N)
+    (h01 : i₀ ≠ i₁) (h02 : i₀ ≠ i₂) (h12 : i₁ ≠ i₂) (t : ℝ) (a : N) :
+    ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) t a b *
+      shearedStableVec i₀ i₁ b = -2 * shearedStableVec i₀ i₁ a := by
+  simp_rw [sheared_jacobian_apply i₀ i₁ i₂ h01 h02 h12 t]
+  rw [← Finset.add_sum_erase Finset.univ _ (Finset.mem_univ i₀)]
+  rw [← Finset.add_sum_erase (Finset.univ.erase i₀) _
+    (Finset.mem_erase.mpr ⟨h01.symm, Finset.mem_univ i₁⟩)]
+  have h_rest : ∑ b ∈ (Finset.univ.erase i₀).erase i₁,
+      (if a = i₀ then if b = i₀ then -2 else if b = i₂ then 2 else 0
+       else if a = i₁ then if b = i₀ then 1 else if b = i₁ then 1 else if b = i₂ then -2 else 0
+       else 0) * shearedStableVec i₀ i₁ b = 0 := by
+    apply Finset.sum_eq_zero
+    intro b hb
+    have hb1 : b ≠ i₁ := (Finset.mem_erase.mp hb).1
+    have hb0 : b ≠ i₀ := (Finset.mem_erase.mp (Finset.mem_erase.mp hb).2).1
+    simp [shearedStableVec, hb0, hb1]
+  rw [h_rest, add_zero]
+  by_cases ha0 : a = i₀
+  · rw [ha0]
+    simp [shearedStableVec, h01.symm, h12]
+  · by_cases ha1 : a = i₁
+    · rw [ha1]
+      simp [shearedStableVec, h01.symm]
+      norm_num
+    · simp [shearedStableVec, ha0, ha1]
+
+/-- `shearedUnstableVec` is an exact eigenvector of `KuramotoJacobian` with eigenvalue `+1`. -/
+lemma sheared_jacobian_unstable_eigen (i₀ i₁ i₂ : N)
+    (h01 : i₀ ≠ i₁) (h02 : i₀ ≠ i₂) (h12 : i₁ ≠ i₂) (t : ℝ) (a : N) :
+    ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) t a b *
+      shearedUnstableVec i₁ b = 1 * shearedUnstableVec i₁ a := by
+  simp_rw [sheared_jacobian_apply i₀ i₁ i₂ h01 h02 h12 t]
+  rw [Finset.sum_eq_single i₁]
+  · by_cases ha0 : a = i₀
+    · rw [ha0]; simp [shearedUnstableVec, h01, h01.symm, h12]
+    · by_cases ha1 : a = i₁
+      · rw [ha1]; simp [shearedUnstableVec, h01.symm]
+      · simp [shearedUnstableVec, ha0, ha1]
+  · intro b _ hb1
+    simp [shearedUnstableVec, hb1]
+  · intro h_not_mem
+    exact absurd (Finset.mem_univ i₁) h_not_mem
 
 /-- On the synchronization gauge orbit (`∀ i j, ϕ t i = ϕ t j`), all cosine factors
 evaluate to `1`, reducing `KuramotoJacobian` to the constant graph Laplacian
@@ -597,7 +756,329 @@ noncomputable def uniform_kuramoto_tangent_splitting
       intro v hv hv0 t ht
       exact uniform_variational_zero_sum_contraction κ K h_uniform_κ ϕ h_sync v hv hv0 t ht }
 
+/-- Uniqueness of zero variational solutions along `shearedTrajectory`:
+Any `IsVariationalSolution` with `w 0 = 0` vanishes identically for all `t ≥ 0`. -/
+lemma sheared_variational_zero_unique (i₀ i₁ i₂ : N)
+    (h01 : i₀ ≠ i₁) (h02 : i₀ ≠ i₂) (h12 : i₁ ≠ i₂)
+    (w : ℝ → (N → ℝ))
+    (hw : IsVariationalSolution (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) w)
+    (hw0 : w 0 = 0) (t : ℝ) (ht : 0 ≤ t) :
+    w t = 0 := by
 
+ -- Step 1: Squared Euclidean energy E(s) and its time derivative E'(s)
+  let E : ℝ → ℝ := fun s => ∑ a : N, (w s a) ^ 2
+  let E' : ℝ → ℝ := fun s =>
+    ∑ a : N, 2 * w s a * (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b)
+  have hE_deriv : ∀ s ≥ (0 : ℝ), HasDerivAt E (E' s) s := by
+    intro s hs
+    have h_term : ∀ a ∈ Finset.univ, HasDerivAt (fun t' => (w t' a) ^ 2)
+        (2 * w s a * (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b)) s := by
+      intro a _
+      have h_mul := (hw s hs a).mul (hw s hs a)
+      have h_eq : (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b) * w s a +
+          w s a * (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b) =
+          2 * w s a * (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b) := by
+        ring
+      have h_fn : ((fun t' => w t' a) * (fun t' => w t' a)) = (fun t' => w t' a ^ 2) := by
+        ext t'; simp [sq]
+      rw [h_fn, h_eq] at h_mul
+      exact h_mul
+    simpa [E, E'] using HasDerivAt.fun_sum h_term
+
+  -- Step 2: Entrywise Jacobian bound |J_{a, b}| ≤ 2
+  have hJ_bound : ∀ s a b,
+
+      |KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b| ≤ 2 := by
+    intro s a b
+    rw [sheared_jacobian_apply i₀ i₁ i₂ h01 h02 h12 s a b]
+    split_ifs <;> norm_num
+
+  -- Step 3: AM–GM quadratic domination for each pair (a, b)
+  have h_pair_bound : ∀ s a b,
+      2 * w s a * (KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b) ≤
+        2 * ((w s a) ^ 2 + (w s b) ^ 2) := by
+    intro s a b
+    set J_ab := KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b
+    have h1 : 2 * w s a * (J_ab * w s b) ≤ 4 * (|w s a| * |w s b|) := by
+      calc
+        2 * w s a * (J_ab * w s b) ≤ |2 * w s a * (J_ab * w s b)| := le_abs_self _
+        _ = 2 * |w s a| * (|J_ab| * |w s b|) := by
+            rw [abs_mul, abs_mul, abs_mul, abs_of_pos (by norm_num : (0 : ℝ) < 2)]
+        _ ≤ 2 * |w s a| * (2 * |w s b|) := by
+            gcongr
+            exact hJ_bound s a b
+        _ = 4 * (|w s a| * |w s b|) := by ring
+    have h2 : 2 * (|w s a| * |w s b|) ≤ (w s a) ^ 2 + (w s b) ^ 2 := by
+      nlinarith [sq_nonneg (|w s a| - |w s b|), sq_abs (w s a), sq_abs (w s b)]
+    linarith
+
+  -- Step 4: Sum over a, b ∈ N to get E'(s) ≤ 4 * |N| * E(s) and E(s) * E'(s) ≤ (4 * |N|) * E(s)^2
+  have hE'_le : ∀ s, E' s ≤ (4 * (Fintype.card N : ℝ)) * E s := by
+    intro s
+    dsimp [E, E']
+    calc
+      ∑ a : N, 2 * w s a * (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b)
+          = ∑ a : N, ∑ b : N, 2 * w s a * (KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b) := by
+            simp_rw [Finset.mul_sum]
+      _ ≤ ∑ a : N, ∑ b : N, 2 * ((w s a) ^ 2 + (w s b) ^ 2) := by
+            apply Finset.sum_le_sum; intro a _
+            apply Finset.sum_le_sum; intro b _
+            exact h_pair_bound s a b
+      _ = (4 * (Fintype.card N : ℝ)) * ∑ a : N, (w s a) ^ 2 := by
+            simp_rw [mul_add, Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ, nsmul_eq_mul, ← Finset.mul_sum]
+            ring
+
+  have hE_dissipative : ∀ s, E s * E' s ≤ (4 * (Fintype.card N : ℝ)) * (E s) ^ 2 := by
+    intro s
+    have hE_nonneg : 0 ≤ E s := Finset.sum_nonneg (fun a _ => sq_nonneg (w s a))
+    calc
+      E s * E' s ≤ E s * ((4 * (Fintype.card N : ℝ)) * E s) :=
+          mul_le_mul_of_nonneg_left (hE'_le s) hE_nonneg
+      _ = (4 * (Fintype.card N : ℝ)) * (E s) ^ 2 := by ring
+
+  -- Step 5: Apply kuramoto_gronwall_contraction to conclude E(t) = 0 and w_a(t) = 0
+  have hE_gronwall := kuramoto_gronwall_contraction E E' (4 * (Fintype.card N : ℝ)) t ht
+    (fun s hs => hE_deriv s hs.1) (fun s _ => hE_dissipative s)
+  have hE0 : E 0 = 0 := by simp [E, hw0]
+  rw [hE0] at hE_gronwall
+  simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, zero_mul] at hE_gronwall
+  have hEt_zero : E t = 0 :=
+    sq_eq_zero_iff.mp (le_antisymm hE_gronwall (sq_nonneg (E t)))
+  ext a
+  have ha_sq_le : (w t a) ^ 2 ≤ 0 := by
+    have h_single : (w t a) ^ 2 ≤ ∑ b : N, (w t b) ^ 2 :=
+      Finset.single_le_sum (fun b _ => sq_nonneg (w t b)) (Finset.mem_univ a)
+    change ∑ b : N, (w t b) ^ 2 = 0 at hEt_zero
+    linarith
+  exact sq_eq_zero_iff.mp (le_antisymm ha_sq_le (sq_nonneg (w t a)))
+  
+/-- Non-Orthogonal Covariant Tangent Splitting for Sheared Kuramoto Flows:
+Constructs an explicit `CovariantTangentSplitting` witness on any finite network `N`
+with three distinct nodes `i₀, i₁, i₂`. -/
+noncomputable def sheared_kuramoto_tangent_splitting
+    (i₀ i₁ i₂ : N) (h01 : i₀ ≠ i₁) (h02 : i₀ ≠ i₂) (h12 : i₁ ≠ i₂) :
+    CovariantTangentSplitting (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) (-2) where
+  E_s := fun _ => Submodule.span ℝ {shearedStableVec i₀ i₁}
+  E_u := fun _ => Submodule.span ℝ {shearedUnstableVec i₁}
+  E_c := fun _ => neutralSubspace N
+  h_lambda_neg := by norm_num
+  stable_unstable_disjoint := fun _ => by
+    rw [Submodule.disjoint_def]
+    intro x hxs hxu
+    rw [Submodule.mem_span_singleton] at hxs hxu
+    rcases hxs with ⟨a, rfl⟩
+    rcases hxu with ⟨b, hb⟩
+    have ha0 : a = 0 := by
+      have hi0 := congrFun hb i₀
+      simp [shearedStableVec, shearedUnstableVec, h01] at hi0
+      linarith
+    rw [ha0, zero_smul]
+  stable_invariant := by
+    intro v hv hv0 t ht
+    rw [Submodule.mem_span_singleton] at hv0 ⊢
+    rcases hv0 with ⟨c, hc⟩
+    refine ⟨c * Real.exp (-2 * t), ?_⟩
+    let w : ℝ → (N → ℝ) := fun s a => v s a - (c * Real.exp (-2 * s)) * shearedStableVec i₀ i₁ a
+    have hw_var : IsVariationalSolution (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) w := by
+      intro s hs a
+      have h_exp : HasDerivAt (fun t' => (c * Real.exp (-2 * t')) * shearedStableVec i₀ i₁ a)
+          (-2 * ((c * Real.exp (-2 * s)) * shearedStableVec i₀ i₁ a)) s := by
+        have h1 := (((hasDerivAt_id s).const_mul (-2 : ℝ)).exp.const_mul c).mul_const (shearedStableVec i₀ i₁ a)
+        dsimp only [id] at h1
+        have h_eq : c * (Real.exp (-2 * s) * (-2 * 1)) * shearedStableVec i₀ i₁ a =
+            -2 * ((c * Real.exp (-2 * s)) * shearedStableVec i₀ i₁ a) := by ring
+        rwa [h_eq] at h1
+      have h_sub := (hv s hs a).sub h_exp
+      have h_fn : ((fun t' => v t' a) - (fun t' => (c * Real.exp (-2 * t')) * shearedStableVec i₀ i₁ a)) =
+          (fun t' => w t' a) := rfl
+      rw [h_fn] at h_sub
+      have h_eig := sheared_jacobian_stable_eigen i₀ i₁ i₂ h01 h02 h12 s a
+      have h_lin : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b =
+          (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * v s b) -
+          -2 * ((c * Real.exp (-2 * s)) * shearedStableVec i₀ i₁ a) := by
+        dsimp [w]
+        simp_rw [mul_sub, Finset.sum_sub_distrib]
+        have h_factor : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b *
+            (c * Real.exp (-2 * s) * shearedStableVec i₀ i₁ b) =
+            (c * Real.exp (-2 * s)) *
+            ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * shearedStableVec i₀ i₁ b := by
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro b _
+          ring
+        rw [h_factor, h_eig]
+        ring
+      rw [← h_lin] at h_sub
+      exact h_sub
+    have hw0 : w 0 = 0 := by
+      ext a
+      dsimp [w]
+      have ha := congrFun hc a
+      simp only [Pi.smul_apply, smul_eq_mul] at ha
+      simp [ha]
+    have hwt := sheared_variational_zero_unique i₀ i₁ i₂ h01 h02 h12 w hw_var hw0 t ht
+    ext a
+    have ha := congrFun hwt a
+    dsimp [w] at ha
+    simp only [Pi.smul_apply, smul_eq_mul]
+    linarith
+  unstable_invariant := by
+    intro v hv hv0 t ht
+    rw [Submodule.mem_span_singleton] at hv0 ⊢
+    rcases hv0 with ⟨c, hc⟩
+    refine ⟨c * Real.exp (1 * t), ?_⟩
+    let w : ℝ → (N → ℝ) := fun s a => v s a - (c * Real.exp (1 * s)) * shearedUnstableVec i₁ a
+    have hw_var : IsVariationalSolution (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) w := by
+      intro s hs a
+      have h_exp : HasDerivAt (fun t' => (c * Real.exp (1 * t')) * shearedUnstableVec i₁ a)
+          (1 * ((c * Real.exp (1 * s)) * shearedUnstableVec i₁ a)) s := by
+        have h1 := (((hasDerivAt_id s).const_mul (1 : ℝ)).exp.const_mul c).mul_const (shearedUnstableVec i₁ a)
+        dsimp only [id] at h1
+        have h_eq : c * (Real.exp (1 * s) * (1 * 1)) * shearedUnstableVec i₁ a =
+            1 * ((c * Real.exp (1 * s)) * shearedUnstableVec i₁ a) := by ring
+        rwa [h_eq] at h1
+      have h_sub := (hv s hs a).sub h_exp
+      have h_fn : ((fun t' => v t' a) - (fun t' => (c * Real.exp (1 * t')) * shearedUnstableVec i₁ a)) =
+          (fun t' => w t' a) := rfl
+      rw [h_fn] at h_sub
+      have h_eig := sheared_jacobian_unstable_eigen i₀ i₁ i₂ h01 h02 h12 s a
+      have h_lin : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b =
+          (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * v s b) -
+          1 * ((c * Real.exp (1 * s)) * shearedUnstableVec i₁ a) := by
+        dsimp [w]
+        simp_rw [mul_sub, Finset.sum_sub_distrib]
+        have h_factor : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b *
+            (c * Real.exp (1 * s) * shearedUnstableVec i₁ b) =
+            (c * Real.exp (1 * s)) *
+            ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * shearedUnstableVec i₁ b := by
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro b _
+          ring
+        rw [h_factor, h_eig]
+        ring
+      rw [← h_lin] at h_sub
+      exact h_sub
+    have hw0 : w 0 = 0 := by
+      ext a
+      dsimp [w]
+      have ha := congrFun hc a
+      simp only [Pi.smul_apply, smul_eq_mul] at ha
+      simp [ha]
+    have hwt := sheared_variational_zero_unique i₀ i₁ i₂ h01 h02 h12 w hw_var hw0 t ht
+    ext a
+    have ha := congrFun hwt a
+    dsimp [w] at ha
+    simp only [Pi.smul_apply, smul_eq_mul]
+    linarith
+  neutral_invariant := by
+    intro v hv hv0 t ht
+    rw [neutralSubspace, Submodule.mem_span_singleton] at hv0 ⊢
+    rcases hv0 with ⟨c, hc⟩
+    refine ⟨c, ?_⟩
+    let w : ℝ → (N → ℝ) := fun s a => v s a - c
+    have hw_var : IsVariationalSolution (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) w := by
+      intro s hs a
+      have h_sub := (hv s hs a).sub_const c
+      have h_kern : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b =
+          ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * v s b := by
+        dsimp [w]
+        simp_rw [mul_sub, Finset.sum_sub_distrib]
+        have h_row := (kuramoto_jacobian_on_gauge_orbit (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s
+          (fun _ _ => rfl)).2 a
+        have h_c : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * c = 0 := by
+          have h_factor : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * c =
+              c * ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * (1 : ℝ) := by
+            rw [Finset.mul_sum]
+            apply Finset.sum_congr rfl
+            intro b _
+            ring
+          rw [h_factor, h_row, mul_zero]
+        rw [h_c, sub_zero]
+      rwa [← h_kern] at h_sub
+    have hw0 : w 0 = 0 := by
+      ext a
+      dsimp [w]
+      have ha := congrFun hc a
+      simp only [Pi.smul_apply, smul_eq_mul, mul_one] at ha
+      linarith
+    have hwt := sheared_variational_zero_unique i₀ i₁ i₂ h01 h02 h12 w hw_var hw0 t ht
+    ext a
+    have ha := congrFun hwt a
+    dsimp [w] at ha
+    simp only [Pi.smul_apply, smul_eq_mul, mul_one]
+    linarith
+  stable_contract := by
+    intro v hv hv0 t ht
+    rw [Submodule.mem_span_singleton] at hv0
+    rcases hv0 with ⟨c, hc⟩
+    let w : ℝ → (N → ℝ) := fun s a => v s a - (c * Real.exp (-2 * s)) * shearedStableVec i₀ i₁ a
+    have hw_var : IsVariationalSolution (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) w := by
+      intro s hs a
+      have h_exp : HasDerivAt (fun t' => (c * Real.exp (-2 * t')) * shearedStableVec i₀ i₁ a)
+          (-2 * ((c * Real.exp (-2 * s)) * shearedStableVec i₀ i₁ a)) s := by
+        have h1 := (((hasDerivAt_id s).const_mul (-2 : ℝ)).exp.const_mul c).mul_const (shearedStableVec i₀ i₁ a)
+        dsimp only [id] at h1
+        have h_eq : c * (Real.exp (-2 * s) * (-2 * 1)) * shearedStableVec i₀ i₁ a =
+            -2 * ((c * Real.exp (-2 * s)) * shearedStableVec i₀ i₁ a) := by ring
+        rwa [h_eq] at h1
+      have h_sub := (hv s hs a).sub h_exp
+      have h_fn : ((fun t' => v t' a) - (fun t' => (c * Real.exp (-2 * t')) * shearedStableVec i₀ i₁ a)) =
+          (fun t' => w t' a) := rfl
+      rw [h_fn] at h_sub
+      have h_eig := sheared_jacobian_stable_eigen i₀ i₁ i₂ h01 h02 h12 s a
+      have h_lin : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * w s b =
+          (∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * v s b) -
+          -2 * ((c * Real.exp (-2 * s)) * shearedStableVec i₀ i₁ a) := by
+        dsimp [w]
+        simp_rw [mul_sub, Finset.sum_sub_distrib]
+        have h_factor : ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b *
+            (c * Real.exp (-2 * s) * shearedStableVec i₀ i₁ b) =
+            (c * Real.exp (-2 * s)) *
+            ∑ b : N, KuramotoJacobian (shearedCoupling i₀ i₁ i₂) (shearedTrajectory N) s a b * shearedStableVec i₀ i₁ b := by
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro b _
+          ring
+        rw [h_factor, h_eig]
+        ring
+      rw [← h_lin] at h_sub
+      exact h_sub
+    have hw0 : w 0 = 0 := by
+      ext a
+      dsimp [w]
+      have ha := congrFun hc a
+      simp only [Pi.smul_apply, smul_eq_mul] at ha
+      simp [ha]
+    have hwt := sheared_variational_zero_unique i₀ i₁ i₂ h01 h02 h12 w hw_var hw0 t ht
+    have hv_eq : ∀ a : N, v t a = (c * Real.exp (-2 * t)) * shearedStableVec i₀ i₁ a := by
+      intro a
+      have ha := congrFun hwt a
+      dsimp [w] at ha
+      linarith
+    have hv0_eq : ∀ a : N, v 0 a = c * shearedStableVec i₀ i₁ a := by
+      intro a
+      have ha := congrFun hc a
+      simp only [Pi.smul_apply, smul_eq_mul] at ha
+      linarith
+    simp_rw [hv_eq, hv0_eq]
+    have h_sum_t : ∑ a : N, ((c * Real.exp (-2 * t)) * shearedStableVec i₀ i₁ a) ^ 2 =
+        (c ^ 2 * Real.exp (2 * (-2) * t)) * ∑ a : N, (shearedStableVec i₀ i₁ a) ^ 2 := by
+      have h_term : ∀ a : N, ((c * Real.exp (-2 * t)) * shearedStableVec i₀ i₁ a) ^ 2 =
+          (c ^ 2 * Real.exp (2 * (-2) * t)) * (shearedStableVec i₀ i₁ a) ^ 2 := by
+        intro a
+        calc
+          ((c * Real.exp (-2 * t)) * shearedStableVec i₀ i₁ a) ^ 2
+              = c ^ 2 * (Real.exp (-2 * t) * Real.exp (-2 * t)) * (shearedStableVec i₀ i₁ a) ^ 2 := by ring
+          _ = c ^ 2 * Real.exp (-2 * t + -2 * t) * (shearedStableVec i₀ i₁ a) ^ 2 := by rw [← Real.exp_add]
+          _ = (c ^ 2 * Real.exp (2 * (-2) * t)) * (shearedStableVec i₀ i₁ a) ^ 2 := by ring_nf
+      simp_rw [h_term, ← Finset.mul_sum]
+    have h_sum_0 : ∑ a : N, (c * shearedStableVec i₀ i₁ a) ^ 2 =
+        c ^ 2 * ∑ a : N, (shearedStableVec i₀ i₁ a) ^ 2 := by
+      simp_rw [mul_pow, ← Finset.mul_sum]
+    rw [h_sum_t, h_sum_0]
+    exact le_of_eq (by ring)
+  
 omit [DecidableEq N] in
 /-- Kuramoto Detuning Threshold → Spectral Contraction Bridge.
 Under a detuning + noise threshold condition ensuring effective dissipation at rate
@@ -610,7 +1091,7 @@ theorem kuramoto_detuning_spectral_contraction
     -- Initial state lies strictly inside the unit synchronization basin
     (h_init_basin : ∀ i j, |ϕ 0 i - ϕ 0 j| < 1)
     -- Detuning & coupling threshold: effective pairwise velocity opposes phase separation
-    (h_detuning_threshold : ∀ (t : ℝ) (i j : N),
+    (h_detuning_threshold : ∀ t ≥ 0, ∀ (i j : N),
       let Δ := ϕ t i - ϕ t j
       let Δ_dot := (ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
                    (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j)
@@ -626,8 +1107,8 @@ theorem kuramoto_detuning_spectral_contraction
     intro s _
     exact (h_flow.2 s i).sub (h_flow.2 s j)
   have h_diss : ∀ s ∈ Set.Icc (0 : ℝ) t, Δ s * Δ' s ≤ lambda_bound * (Δ s) ^ 2 := by
-    intro s _
-    have h1 := h_detuning_threshold s i j
+    intro s hs
+    have h1 := h_detuning_threshold s hs.1 i j
     have h2 : lambda_phys * (Δ s) ^ 2 ≤ lambda_bound * (Δ s) ^ 2 :=
       mul_le_mul_of_nonneg_right h_ge_phys (sq_nonneg _)
     exact le_trans h1 h2
@@ -707,7 +1188,7 @@ theorem kuramoto_flow_converges_to_attractor
   · -- Property D: Trajectory Trapping derived from Grönwall + Detuning Threshold
     intro t ht; dsimp [𝓤_tubular]; intro i j
     exact kuramoto_detuning_spectral_contraction ω κ ξ B lambda_phys h_lambda_phys
-      ϕ' h_is_flow h_init_basin (h_detuning_threshold ϕ' h_is_flow)
+      ϕ' h_is_flow h_init_basin (fun s _ => h_detuning_threshold ϕ' h_is_flow s)
       t ht lambda_bound h_ge_phys h_le_zero i j
 
 omit [DecidableEq N] in
@@ -760,7 +1241,7 @@ theorem kuramoto_sync_flow_converges_to_attractor
     exact lt_of_lt_of_le (hx i j) h_le
   · intro t ht; dsimp [𝓤_tubular]; intro i j
     exact kuramoto_detuning_spectral_contraction ω κ ξ B lambda_phys h_lambda_phys
-      ϕ' h_is_flow h_init_basin h_detuning t ht lambda_bound h_ge_phys h_le_zero i j
+      ϕ' h_is_flow h_init_basin (fun s _ => h_detuning s) t ht lambda_bound h_ge_phys h_le_zero i j
 
 /-- Jordan's Inequality on `[0, π / 2]`: `(2 / π) * x ≤ sin x`.
 Proved directly via concavity of `sin` (`deriv sin = cos` is antitone on `[0, π / 2]`). -/
@@ -1267,69 +1748,56 @@ omit [DecidableEq N] in
 (Attractor Determinism) by demonstrating convergence across the entire family of
 admissible stability parameters λ ≤ 0. -/
 theorem pmad_flow_converges_to_attractor
-    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B lambda_phys : ℝ)
     (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
-    ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ),
+      ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+        ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
+    ∃ (A : Set (PhaseState N)), ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
       AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound :=
   tubular_gauge_attractor_of_contraction
     (fun ϕ => IsPmadFlow ϕ ω κ ξ B)
-    (fun lambda_bound => lambda_bound ≤ 0)
+    (fun lambda_bound => lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0)
     h_spectral_contraction
     
-/-- Direct CLV Tangent Splitting from `pmad_flow_converges_to_attractor`'s Spectral Contraction:
-Shows that the exact `h_spectral_contraction` hypothesis of `pmad_flow_converges_to_attractor`
-forces every `IsPmadFlow` trajectory onto `A_gauge_orbit` (`∀ t ≥ 0, ϕ t i = ϕ t j`) and
-constructs a `CovariantTangentSplitting κ ϕ (-K)` alongside `pmad_flow_converges_to_attractor`. -/
+/-- Direct Attractor Convergence and CLV Tangent Splitting from Pairwise Dissipation:
+Derives the spectral contraction bound directly from `h_init_sync` and `h_dissipative`
+via `kuramoto_detuning_spectral_contraction`, establishing both `pmad_flow_converges_to_attractor`
+and an explicit `CovariantTangentSplitting κ ϕ (-K)` along `A_gauge_orbit`. -/
 theorem pmad_flow_attractor_and_clv_splitting
     [Nonempty N]
-    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B K : ℝ)
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B K lambda_phys : ℝ)
     (hK : 0 < K)
+    (h_lambda_phys : lambda_phys ≤ 0)
     (h_uniform_κ : ∀ i j, κ i j = K / (Fintype.card N : ℝ))
-    (h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
-    (∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ),
+    (h_init_sync : ∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B → ∀ i j, ϕ 0 i = ϕ 0 j)
+    (h_dissipative : ∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
+      ∀ t ≥ 0, ∀ (i j : N),
+        let Δ := ϕ t i - ϕ t j
+        let Δ_dot := (ω i + ∑ k, κ i k * Real.sin (ϕ t k - ϕ t i) + ξ t i) -
+                     (ω j + ∑ k, κ j k * Real.sin (ϕ t k - ϕ t j) + ξ t j)
+        Δ * Δ_dot ≤ lambda_phys * Δ ^ 2) :
+    (∃ (A : Set (PhaseState N)), ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
       AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound) ∧
     (∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
       Nonempty (CovariantTangentSplitting κ ϕ (-K))) := by
-  refine ⟨pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction, ?_⟩
+  -- 1. Derive `h_spectral_contraction` directly from `h_init_sync` and `h_dissipative`
+  have h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
+      ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+        ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
+    intro ϕ' h_flow t ht lambda_bound h_lam i j
+    have h_init_basin : ∀ a b, |ϕ' 0 a - ϕ' 0 b| < 1 := by
+      intro a b
+      rw [h_init_sync ϕ' h_flow a b, sub_self, abs_zero]
+      exact zero_lt_one
+    exact kuramoto_detuning_spectral_contraction ω κ ξ B lambda_phys h_lambda_phys
+      ϕ' h_flow h_init_basin (h_dissipative ϕ' h_flow)
+      t ht lambda_bound h_lam.1 h_lam.2 i j
+  -- 2. Invoke `pmad_flow_converges_to_attractor` and construct the CLV splitting
+  refine ⟨pmad_flow_converges_to_attractor ω κ ξ B lambda_phys h_spectral_contraction, ?_⟩
   intro ϕ h_flow
-  -- 1. Prove ϕ t i = ϕ t j for all t > 0 by choosing lambda_bound = log(ε) / t
-  have h_pos_sync : ∀ t > 0, ∀ i j, ϕ t i = ϕ t j := by
-    intro t ht i j
-    have h_le_zero : ∀ ε > 0, |ϕ t i - ϕ t j| ≤ ε := by
-      intro ε hε
-      by_cases hε1 : ε ≤ 1
-      · have h_lam : Real.log ε / t ≤ 0 :=
-          div_nonpos_of_nonpos_of_nonneg (Real.log_nonpos (le_of_lt hε) hε1) (le_of_lt ht)
-        have h_lt := h_spectral_contraction ϕ h_flow t ht (Real.log ε / t) h_lam i j
-        rw [div_mul_cancel₀ _ (ne_of_gt ht), Real.exp_log hε] at h_lt
-        exact le_of_lt h_lt
-      · push Not at hε1
-        have h_lt := h_spectral_contraction ϕ h_flow t ht 0 (le_refl 0) i j
-        simp only [zero_mul, Real.exp_zero] at h_lt
-        linarith
-    have h_abs_zero : |ϕ t i - ϕ t j| = 0 :=
-      le_antisymm (le_of_forall_pos_le_add (fun ε hε => by simpa using h_le_zero ε hε)) (abs_nonneg _)
-    exact sub_eq_zero.mp (abs_eq_zero.mp h_abs_zero)
-  -- 2. Extend to t = 0 by continuity of ϕ · i - ϕ · j at 0
-  have h_all_sync : ∀ t ≥ 0, ∀ i j, ϕ t i = ϕ t j := by
-    intro t ht i j
-    rcases eq_or_lt_of_le ht with rfl | h_pos
-    · have h_cont : Continuous (fun s => ϕ s i - ϕ s j) :=
-        continuous_iff_continuousAt.mpr (fun s => ((h_flow.2 s i).continuousAt).sub ((h_flow.2 s j).continuousAt))
-      have h_tendsto : Filter.Tendsto (fun s => ϕ s i - ϕ s j) (nhdsWithin 0 (Set.Ioi 0)) (nhds (ϕ 0 i - ϕ 0 j)) :=
-        h_cont.continuousAt.tendsto.mono_left nhdsWithin_le_nhds
-      have h_zero_tendsto : Filter.Tendsto (fun _ : ℝ => (0 : ℝ)) (nhdsWithin 0 (Set.Ioi 0)) (nhds (ϕ 0 i - ϕ 0 j)) :=
-        h_tendsto.congr' (Filter.eventuallyEq_of_mem self_mem_nhdsWithin (fun s hs => sub_eq_zero.mpr (h_pos_sync s hs i j)))
-      exact sub_eq_zero.mp (tendsto_nhds_unique h_zero_tendsto tendsto_const_nhds)
-    · exact h_pos_sync t h_pos i j
-  -- 3. Apply kuramoto_attractor_carries_clv_splitting via uniform dissipation on A_gauge_orbit
-  exact ⟨uniform_kuramoto_tangent_splitting ω κ ξ B K 0 hK h_uniform_κ ϕ h_flow
-    (fun s hs i j => by
-      have h_eq : ϕ s i - ϕ s j = 0 := sub_eq_zero.mpr (h_all_sync s hs i j)
-      simp [h_eq])
-    (fun i j => h_all_sync 0 (le_refl 0) i j)⟩
+  exact ⟨uniform_kuramoto_tangent_splitting ω κ ξ B K lambda_phys hK h_uniform_κ ϕ h_flow
+    (h_dissipative ϕ h_flow)
+    (h_init_sync ϕ h_flow)⟩
 
 omit [DecidableEq N] in
 /-- Master Hypothesis-Free Kuramoto Attractor Theorem:
@@ -1363,7 +1831,7 @@ theorem uniform_kuramoto_converges_to_attractor
     (fun ϕ' ⟨h_flow, h_init_basin, h_cone, h_margin⟩ t ht lambda_bound ⟨h_ge_phys, h_le_zero⟩ i j =>
       kuramoto_detuning_spectral_contraction ω κ ξ B lambda_phys h_lambda_phys
         ϕ' h_flow h_init_basin
-        (fun s a b => uniform_kuramoto_detuning_to_dissipation ω κ ξ B K Δω r₀ lambda_phys
+        (fun s _ a b => uniform_kuramoto_detuning_to_dissipation ω κ ξ B K Δω r₀ lambda_phys
           hK hr₀_nonneg hr₀_le_half_pi h_uniform_κ h_detuning h_noise
           ϕ' s (h_cone s) a b (h_margin s a b))
         t ht lambda_bound h_ge_phys h_le_zero i j)
@@ -1405,7 +1873,7 @@ theorem resonant_kuramoto_converges_to_attractor
     (fun ϕ' ⟨h_flow, h_init_basin, h_cone, h_margin⟩ t ht lambda_bound ⟨h_ge_phys, h_le_zero⟩ i j =>
       kuramoto_detuning_spectral_contraction ω κ ξ B lambda_phys h_lambda_phys
         ϕ' h_flow h_init_basin
-        (fun s a b => resonant_kuramoto_detuning_to_dissipation ω κ ξ R hR B K r_min Δω r₀ lambda_phys
+        (fun s _ a b => resonant_kuramoto_detuning_to_dissipation ω κ ξ R hR B K r_min Δω r₀ lambda_phys
           hK hr_min_pos hr_min_le hr₀_nonneg hr₀_le_half_pi h_resonant_κ h_detuning h_noise
           ϕ' s (h_cone s) a b (h_margin s a b))
         t ht lambda_bound h_ge_phys h_le_zero i j)
@@ -1420,7 +1888,7 @@ theorem kuramoto_strong_coupling_limit_to_pmad_attractor
     [Nonempty N]
     (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ)
     (R : N → N → ℝ) (hR : UbiquitousResonance N R)
-    (B r_min Δω r₀ : ℝ)
+    (B r_min Δω r₀ lambda_phys : ℝ)
     (hr_min_pos : 0 < r_min) (hr_min_le : ∀ i j, r_min ≤ R i j)
     (hr₀_nonneg : 0 ≤ r₀) (hr₀_le_half_pi : r₀ ≤ Real.pi / 2)
     (h_detuning : ∀ i j, |ω i - ω j| ≤ Δω)
@@ -1429,28 +1897,28 @@ theorem kuramoto_strong_coupling_limit_to_pmad_attractor
     (h_basin_invariance : ∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
       (∀ i j, |ϕ 0 i - ϕ 0 j| < 1) ∧ (∀ t a b, |ϕ t a - ϕ t b| ≤ r₀))
     -- Strong-coupling / adiabatic regime over the resonant network `R`:
-    (h_strong_coupling : ∀ lambda_bound ≤ (0 : ℝ), ∃ K > 0,
+    (h_strong_coupling : ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 → ∃ K > 0,
       (∀ i j, κ i j = (K / (Fintype.card N : ℝ)) * R i j) ∧
       (∀ (ϕ : Trajectory N), IsPmadFlow ϕ ω κ ξ B →
         ∀ t i j, (Δω + 2 * B + 2 * K * (1 - r_min)) * |ϕ t i - ϕ t j| ≤
           ((2 / Real.pi) * (K * r_min) * Real.cos r₀ + lambda_bound) * (ϕ t i - ϕ t j) ^ 2)) :
-    ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ),
+    ∃ (A : Set (PhaseState N)), ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
       AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound := by
   -- 1. Derive `h_spectral_contraction` from Axiom A4 resonance + Jordan's inequality + Grönwall contraction
   have h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B →
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
-    intro ϕ' h_flow t ht lambda_bound h_le_zero i j
+      ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+        ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
+    intro ϕ' h_flow t ht lambda_bound h_lam i j
     obtain ⟨h_init, h_cone⟩ := h_basin_invariance ϕ' h_flow
-    obtain ⟨K, hK, h_res, h_marg⟩ := h_strong_coupling lambda_bound h_le_zero
-    have h_diss := fun s a b =>
+    obtain ⟨K, hK, h_res, h_marg⟩ := h_strong_coupling lambda_bound h_lam
+    have h_diss := fun s (_ : s ≥ 0) a b =>
       resonant_kuramoto_detuning_to_dissipation ω κ ξ R hR B K r_min Δω r₀ lambda_bound
         hK hr_min_pos hr_min_le hr₀_nonneg hr₀_le_half_pi h_res h_detuning h_noise
         ϕ' s (h_cone s) a b (h_marg ϕ' h_flow s a b)
-    exact kuramoto_detuning_spectral_contraction ω κ ξ B lambda_bound h_le_zero
-      ϕ' h_flow h_init h_diss t ht lambda_bound le_rfl h_le_zero i j
+    exact kuramoto_detuning_spectral_contraction ω κ ξ B lambda_bound h_lam.2
+      ϕ' h_flow h_init h_diss t ht lambda_bound le_rfl h_lam.2 i j
   -- 2. Invoke `pmad_flow_converges_to_attractor` directly
-  exact pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
-
+  exact pmad_flow_converges_to_attractor ω κ ξ B lambda_phys h_spectral_contraction
 
 omit [DecidableEq N] in
 /-- Invariance under global phase shift.
@@ -1621,36 +2089,37 @@ theorem laurent_shielded_mutation_invariant
     -- Structural condition: forbid the specific contractive channel sector across the network
     (h_no_contraction : ∀ i j, ¬(seed.B_matrix i k < 0 ∧ seed.B_matrix k j < 0)) :
     IsLaurentShielded ϕ (mutate_seed seed k) := by
-
   unfold IsLaurentShielded at h_shield ⊢
-  intro t ht i j
-  rcases h_shield t ht i j with ⟨P_base, h_envelope⟩
-  dsimp [laurent_state_evaluation] at h_envelope ⊢
+  rcases h_shield with ⟨P_base, h_envelope⟩
 
-  let s1 := ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2) + ∑ i, ((ϕ t i : ℝ) ^ 2)
-  let s2 := ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2) + ∑ i, ((ϕ t i : ℝ) ^ 2)
+  let m1 := ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2)
+  let m2 := ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2)
 
-  have h_scale_monotone : s1 ≤ s2 := by
-    let m1 := ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2)
-    let m2 := ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2)
-    let p_norm := ∑ i, ((ϕ t i : ℝ) ^ 2)
-    -- Derive the sum inequality by distributing cell-level bounds
-    have h_sum_le : ∑ i, ∑ j, ((seed.B_matrix i j : ℝ) ^ 2) ≤ ∑ i, ∑ j, (((mutate_seed seed k).B_matrix i j : ℝ) ^ 2) := by
-      apply Finset.sum_le_sum; intro i' _
-      apply Finset.sum_le_sum; intro j' _
-      exact cell_mutation_scale_bounds seed k i' j' h_acyclic (h_no_contraction i' j')
-    linarith [h_sum_le]
+  have h_scale_monotone : m1 ≤ m2 := by
+    apply Finset.sum_le_sum; intro i' _
+    apply Finset.sum_le_sum; intro j' _
+    exact cell_mutation_scale_bounds seed k i' j' h_acyclic (h_no_contraction i' j')
 
-  have h_exp_monotone : Real.exp s1 + 1 ≤ Real.exp s2 + 1 := by
+  have h_exp_monotone : Real.exp m1 + 1 ≤ Real.exp m2 + 1 := by
     have h_exp := Real.exp_le_exp.mpr h_scale_monotone
     linarith
-  have hs1 : 1 ≤ Real.exp s1 + 1 := by have := Real.exp_pos s1; linarith
-  have hs2 : 1 ≤ Real.exp s2 + 1 := by have := Real.exp_pos s2; linarith
 
-  rcases laurent_eval_scale_bound P_base (Real.exp s1 + 1) (Real.exp s2 + 1) h_exp_monotone hs1 hs2 with ⟨P_transformed, h_scale⟩
-  use P_transformed
-  exact le_trans h_envelope h_scale
-
+  -- Since q1 = exp(m1) + 1 and q2 = exp(m2) + 1 are independent of t,
+  -- choose P_transformed = LaurentPolynomial.C (laurent_seed_envelope seed P_base)
+  let M := laurent_seed_envelope seed P_base
+  have hM_nonneg : 0 ≤ M := abs_nonneg _
+  refine ⟨LaurentPolynomial.C M, ?_⟩
+  intro t ht i j
+  have h_env_eq : laurent_seed_envelope (mutate_seed seed k) (LaurentPolynomial.C M) = M := by
+    have h_coeff : (LaurentPolynomial.C M).coeff = Finsupp.single (0 : ℤ) M := by
+      ext n
+      rw [LaurentPolynomial.C_apply]
+      simp [Finsupp.single_apply, eq_comm]
+    dsimp [laurent_seed_envelope]
+    rw [h_coeff, Finsupp.sum_single_index (by simp)]
+    simp [abs_of_nonneg hM_nonneg]
+  rw [h_env_eq]
+  exact h_envelope t ht i j
 
 omit [DecidableEq N] in
 /-- Cluster-Weave Controlled Attractor Convergence.
@@ -1658,22 +2127,24 @@ omit [DecidableEq N] in
     to a Laurent-shielded cluster variety substrate, it satisfies the required spectral 
     contraction bounds to guarantee stability and convergence. -/  
 theorem cluster_flow_converges_to_attractor
-    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ) (seed : ClusterSeed N)
+    (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B lambda_phys : ℝ) (seed : ClusterSeed N)
     -- Hypothesis: Physical PMAD flows are trapped inside the Laurent shielding envelope
     (h_envelope_trapping : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → IsLaurentShielded ϕ' seed)
     -- Hypothesis: The system's Arnold tongues are generated directly by Laurent shielding invariants
     (h_laurent_bounds : ∀ (ϕ' : Trajectory N), IsClassOneStable ϕ' seed ω κ ξ B →
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
-    ∃ (A : Set (PhaseState N)), ∀ lambda_bound ≤ (0 : ℝ), 
+      ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+        ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t)) :
+    ∃ (A : Set (PhaseState N)), ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 → 
       AttractorSet N (fun ϕ => IsPmadFlow ϕ ω κ ξ B) A lambda_bound := by
   -- Step 1: Combine flow admissibility and envelope trapping to get Class I stability
   have h_spectral_contraction : ∀ (ϕ' : Trajectory N), IsPmadFlow ϕ' ω κ ξ B → 
-    ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
+    ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+      ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t) := by
     intro ϕ' h_flow t ht lambda_bound h_lambda i j
     have h_class1 : IsClassOneStable ϕ' seed ω κ ξ B := ⟨h_flow, h_envelope_trapping ϕ' h_flow⟩
     exact h_laurent_bounds ϕ' h_class1 t ht lambda_bound h_lambda i j
   -- Step 2: Invoke the main PMAD convergence engine cleanly
-  exact pmad_flow_converges_to_attractor ω κ ξ B h_spectral_contraction
+  exact pmad_flow_converges_to_attractor ω κ ξ B lambda_phys h_spectral_contraction
 
 
 end PMADLean.Dynamics

@@ -414,6 +414,148 @@ theorem clv_regularized_stiffness_diagonal_bound
   rw [hC_eq]
   exact compliance_metric_diagonal_bound ε h_ε d hd i
 
+/-- Endogenous Shear Witness for `clv_compliance_floor_pos`:
+For any finite network `N` with three distinct nodes `i₀, i₁, i₂` and any `α > 0`,
+the sheared flow `shearedTrajectory N` (which satisfies `IsPmadFlow`) carries the
+non-orthogonal `CovariantTangentSplitting` `sheared_kuramoto_tangent_splitting` with
+nontrivial unstable bundle `E^u(t) ≠ ⊥`, hyper-angle `θ_CLV(t) = arccos(1 / √10) ∈ (0, π / 2)`,
+and strictly positive compliance floor `CLVComplianceFloor α split t > 0`. -/
+theorem sheared_clv_compliance_floor_pos
+    (i₀ i₁ i₂ : N) (h01 : i₀ ≠ i₁) (h02 : i₀ ≠ i₂) (h12 : i₁ ≠ i₂)
+    (α : ℝ) (hα : 0 < α) (t : ℝ) :
+    let split := sheared_kuramoto_tangent_splitting i₀ i₁ i₂ h01 h02 h12
+    split.E_u t ≠ ⊥ ∧
+    SubspaceHyperAngle split t = Real.arccos (1 / Real.sqrt 10) ∧
+    0 < SubspaceHyperAngle split t ∧
+    SubspaceHyperAngle split t < Real.pi / 2 ∧
+    0 < CLVComplianceFloor α split t := by
+  intro split
+  -- 1. Prove E_u t ≠ ⊥ since shearedUnstableVec i₁ ∈ E_u t is nonzero at i₁
+  have h_vu_ne : shearedUnstableVec i₁ ≠ 0 := by
+    intro h0
+    have h1 := congrFun h0 i₁
+    simp [shearedUnstableVec] at h1
+  have h_Eu_ne_bot : split.E_u t ≠ ⊥ := by
+    intro h_bot
+    have h_mem : shearedUnstableVec i₁ ∈ split.E_u t :=
+      Submodule.subset_span (Set.mem_singleton _)
+    rw [h_bot, Submodule.mem_bot] at h_mem
+    exact h_vu_ne h_mem
+  have h_vs_ne : shearedStableVec i₀ i₁ ≠ 0 := by
+    intro h0
+    have h1 := congrFun h0 i₀
+    simp [shearedStableVec] at h1
+  -- 2. Evaluate base inner product and norms on N
+  have h_ip_base : phaseInnerProduct (shearedStableVec i₀ i₁) (shearedUnstableVec i₁) = -1 := by
+    unfold phaseInnerProduct
+    rw [Finset.sum_eq_single i₁]
+    · simp [shearedStableVec, shearedUnstableVec, h01.symm]
+    · intro a _ ha1
+      simp [shearedUnstableVec, ha1]
+    · intro h_not_mem
+      exact absurd (Finset.mem_univ i₁) h_not_mem
+  have h_norm_vs : phaseNorm (shearedStableVec i₀ i₁) = Real.sqrt 10 := by
+    unfold phaseNorm phaseInnerProduct
+    congr 1
+    rw [← Finset.add_sum_erase Finset.univ _ (Finset.mem_univ i₀)]
+    rw [← Finset.add_sum_erase (Finset.univ.erase i₀) _
+      (Finset.mem_erase.mpr ⟨h01.symm, Finset.mem_univ i₁⟩)]
+    have h_rest : ∑ a ∈ (Finset.univ.erase i₀).erase i₁,
+        shearedStableVec i₀ i₁ a * shearedStableVec i₀ i₁ a = 0 := by
+      apply Finset.sum_eq_zero
+      intro a ha
+      have ha1 : a ≠ i₁ := (Finset.mem_erase.mp ha).1
+      have ha0 : a ≠ i₀ := (Finset.mem_erase.mp (Finset.mem_erase.mp ha).2).1
+      simp [shearedStableVec, ha0, ha1]
+    rw [h_rest, add_zero]
+    simp [shearedStableVec, h01.symm]
+    norm_num
+  have h_norm_vu : phaseNorm (shearedUnstableVec i₁) = 1 := by
+    unfold phaseNorm phaseInnerProduct
+    have h_sum : ∑ a : N, shearedUnstableVec i₁ a * shearedUnstableVec i₁ a = 1 := by
+      rw [Finset.sum_eq_single i₁]
+      · simp [shearedUnstableVec]
+      · intro a _ ha1
+        simp [shearedUnstableVec, ha1]
+      · intro h_not_mem
+        exact absurd (Finset.mem_univ i₁) h_not_mem
+    rw [h_sum, Real.sqrt_one]
+  -- 3. Show the ratio set equals the singleton {1 / √10} by scale invariance
+  let ratios : Set ℝ :=
+    { r | ∃ u ∈ split.E_s t, ∃ v ∈ split.E_u t,
+      u ≠ 0 ∧ v ≠ 0 ∧ r = |phaseInnerProduct u v| / (phaseNorm u * phaseNorm v) }
+  have h_ratio_base :
+
+      |phaseInnerProduct (shearedStableVec i₀ i₁) (shearedUnstableVec i₁)| /
+        (phaseNorm (shearedStableVec i₀ i₁) * phaseNorm (shearedUnstableVec i₁)) =
+      1 / Real.sqrt 10 := by
+    rw [h_ip_base, h_norm_vs, h_norm_vu, abs_neg, abs_one, mul_one]
+  have h_ratios_eq : ratios = {1 / Real.sqrt 10} := by
+    ext r
+    simp only [ratios, Set.mem_ofPred_eq, Set.mem_singleton_iff]
+    constructor
+    · rintro ⟨u, hu_mem, v, hv_mem, hu_ne, hv_ne, rfl⟩
+      change u ∈ Submodule.span ℝ {shearedStableVec i₀ i₁} at hu_mem
+      change v ∈ Submodule.span ℝ {shearedUnstableVec i₁} at hv_mem
+      rw [Submodule.mem_span_singleton] at hu_mem hv_mem
+      rcases hu_mem with ⟨a, rfl⟩
+      rcases hv_mem with ⟨b, rfl⟩
+      have ha : a ≠ 0 := fun h => hu_ne (by simp [h])
+      have hb : b ≠ 0 := fun h => hv_ne (by simp [h])
+      have h_ip_smul : phaseInnerProduct (a • shearedStableVec i₀ i₁) (b • shearedUnstableVec i₁) =
+          (a * b) * phaseInnerProduct (shearedStableVec i₀ i₁) (shearedUnstableVec i₁) := by
+        unfold phaseInnerProduct
+        simp_rw [Pi.smul_apply, smul_eq_mul]
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro k _
+        ring
+      have h_norm_smul : ∀ (c : ℝ) (w : N → ℝ), phaseNorm (c • w) = |c| * phaseNorm w := by
+        intro c w
+        unfold phaseNorm phaseInnerProduct
+        have h_sq : ∑ k : N, (c • w) k * (c • w) k = c ^ 2 * ∑ k : N, w k * w k := by
+          simp_rw [Pi.smul_apply, smul_eq_mul]
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro k _
+          ring
+        rw [h_sq, Real.sqrt_mul (sq_nonneg c), Real.sqrt_sq_eq_abs]
+      rw [h_ip_smul, h_norm_smul a _, h_norm_smul b _, abs_mul, abs_mul]
+      have h_ab_ne : |a| * |b| ≠ 0 := mul_ne_zero (abs_ne_zero.mpr ha) (abs_ne_zero.mpr hb)
+      calc
+        (|a| * |b| * |phaseInnerProduct (shearedStableVec i₀ i₁) (shearedUnstableVec i₁)|) /
+            (|a| * phaseNorm (shearedStableVec i₀ i₁) * (|b| * phaseNorm (shearedUnstableVec i₁)))
+            = (|a| * |b| * |phaseInnerProduct (shearedStableVec i₀ i₁) (shearedUnstableVec i₁)|) /
+              (|a| * |b| * (phaseNorm (shearedStableVec i₀ i₁) * phaseNorm (shearedUnstableVec i₁))) := by ring
+        _ = |phaseInnerProduct (shearedStableVec i₀ i₁) (shearedUnstableVec i₁)| /
+              (phaseNorm (shearedStableVec i₀ i₁) * phaseNorm (shearedUnstableVec i₁)) :=
+              mul_div_mul_left _ _ h_ab_ne
+        _ = 1 / Real.sqrt 10 := h_ratio_base
+    · rintro rfl
+      exact ⟨shearedStableVec i₀ i₁, Submodule.subset_span (Set.mem_singleton _),
+        shearedUnstableVec i₁, Submodule.subset_span (Set.mem_singleton _),
+        h_vs_ne, h_vu_ne, h_ratio_base.symm⟩
+  -- 4. Compute SubspaceHyperAngle split t = arccos(1 / √10) and verify bounds in (0, π / 2)
+  have h_nonempty : ratios.Nonempty := by
+    rw [h_ratios_eq]
+    exact Set.singleton_nonempty _
+  have h_angle : SubspaceHyperAngle split t = Real.arccos (1 / Real.sqrt 10) := by
+    dsimp [SubspaceHyperAngle]
+    rw [if_pos h_nonempty]
+    change Real.arccos (sSup ratios) = Real.arccos (1 / Real.sqrt 10)
+    rw [h_ratios_eq, csSup_singleton]
+  have h_sqrt10_gt_one : 1 < Real.sqrt 10 := by
+    rw [← Real.sqrt_one]
+    exact Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+  have h_r_pos : 0 < 1 / Real.sqrt 10 := div_pos zero_lt_one (by linarith)
+  have h_r_lt_one : 1 / Real.sqrt 10 < 1 := (div_lt_one (by linarith)).mpr h_sqrt10_gt_one
+  have h_pos : 0 < SubspaceHyperAngle split t := by
+    rw [h_angle]
+    exact Real.arccos_pos.mpr h_r_lt_one
+  have h_lt : SubspaceHyperAngle split t < Real.pi / 2 := by
+    rw [h_angle]
+    exact Real.arccos_lt_pi_div_two.mpr h_r_pos
+  exact ⟨h_Eu_ne_bot, h_angle, h_pos, h_lt, clv_compliance_floor_pos α hα split t h_pos h_lt⟩
 
 omit [DecidableEq N] [Fintype N] in
 /-- Coordinate independence via index permutation.

@@ -215,12 +215,14 @@ theorem closed_loop_metric_backaction_fixed_point
     (seed : ClusterSeed Nvis) (ε : ℝ) (h_ε : ε > 0)
     (metric_drive : Matrix Nvis Nvis ℝ → (Nvis → ℝ))
     (dHint_dphi : Nvis → (Nvis → ℝ) → ℝ)
-    (ω : Nvis → ℝ) (κ : Nvis → Nvis → ℝ) (ξ : ℝ → Nvis → ℝ) (B : ℝ)
+    (ω : Nvis → ℝ) (κ : Nvis → Nvis → ℝ) (ξ : ℝ → Nvis → ℝ) (B lambda_phys : ℝ)
+    (h_lambda_phys : lambda_phys ≤ -1)
     (ϕ : Trajectory Nvis) -- Ingest the active physical trajectory directly
     -- 1. Ingest all necessary dynamic and probability scaling constants
     (h_envelope_trapping : ∀ (ϕ' : Trajectory Nvis), IsPmadFlow ϕ' ω κ ξ B → IsLaurentShielded ϕ' seed)
     (h_laurent_bounds : ∀ (ϕ' : Trajectory Nvis), IsClassOneStable ϕ' seed ω κ ξ B →
-      ∀ t > 0, ∀ lambda_bound ≤ (0 : ℝ), ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
+      ∀ t > 0, ∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+        ∀ i j, |ϕ' t i - ϕ' t j| < Real.exp (lambda_bound * t))
     (h_metric_diagonal_pos : ∀ v, SeedEmergentMetric seed ε h_ε v v ≥ 0)
     (h_asymptotic_squeeze : ∀ T > 0, Real.exp (-1 * T) ≤ ε)
     -- Universal Phase Lock Constraint: Formally forces synchronization balance to resolve name shadowing fields
@@ -234,14 +236,15 @@ theorem closed_loop_metric_backaction_fixed_point
     (h_metric_ceiling : ∀ T > 0, AmplitudeWeight c i j + B * T < ε + SeedEmergentMetric seed ε h_ε i i) :
     ∃ (A : Set (PhaseState Nvis)),
       ∃ (ϕ_active : Trajectory Nvis),
-        (∀ lambda_bound ≤ (0 : ℝ), AttractorSet Nvis (fun ϕ' => IsPmadFlow ϕ' ω κ ξ B) A lambda_bound) ∧
+        (∀ lambda_bound, lambda_phys ≤ lambda_bound ∧ lambda_bound ≤ 0 →
+          AttractorSet Nvis (fun ϕ' => IsPmadFlow ϕ' ω κ ξ B) A lambda_bound) ∧
         VisibleSubmanifoldEvolution (metric_drive (SeedEmergentMetric seed ε h_ε))
       (fun v => EmergentEffectiveForce (fun v' _ => dHint_dphi v' (metric_drive (SeedEmergentMetric seed ε h_ε)))
         (metric_drive (SeedEmergentMetric seed ε h_ε)) v) (fun _ => 0) i + B * 1 =
     (1 + ϕ_active 1 i) * metric_drive (SeedEmergentMetric seed ε h_ε) i + B * 1 := by
 
   -- 1. Call the heavy physical convergence engine from Dynamics.lean
-  have h_engine := cluster_flow_converges_to_attractor ω κ ξ B seed h_envelope_trapping h_laurent_bounds
+  have h_engine := cluster_flow_converges_to_attractor ω κ ξ B lambda_phys seed h_envelope_trapping h_laurent_bounds
   rcases h_engine with ⟨A, h_attractor_exists⟩
 
   -- 2. Pass the real, active physical trajectory to the existential checker to bridge scale layers
@@ -256,7 +259,7 @@ theorem closed_loop_metric_backaction_fixed_point
 
     -- 3. ACTIVELY INTERTWINE THE LINKING LEMMA WITH THE REAL FLOW HYPOTHESES
     have h_link := attractor_trajectory_to_metric_link seed ε h_ε ω κ ξ B
-      A (h_attractor_exists (-1) (by linarith))
+      A (h_attractor_exists (-1) ⟨h_lambda_phys, by linarith⟩)
       ϕ i j θ c reg 1 hT
       h_metric_diagonal_pos (h_asymptotic_squeeze 1 hT) (h_metric_ceiling 1 hT)
 
@@ -280,6 +283,5 @@ theorem closed_loop_metric_backaction_fixed_point
 
     -- 6. Complete the linking proof via linear arithmetic solvers
     linarith [h_link, h_upper_prob_bound]
-
 
 end PMADLean.Incompleteness
