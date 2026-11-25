@@ -228,7 +228,6 @@ theorem gradient_descent_runtime_linearity
     unfold PhaseGradientStep
     linarith [h_contractive, h_abs1, h_abs2]
 
-
   -- 3. Verify that the 2-bit initial configuration boundary matches pmad architecture safety floor
   have h_floor_match : (cfg.m : ℝ) ≥ 2 := by
     rw [cfg.h_bitsize]

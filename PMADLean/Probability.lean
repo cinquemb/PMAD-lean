@@ -291,7 +291,7 @@ omit [DecidableEq N] in
 theorem born_rule_bounded_noise_concentration
     (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B : ℝ)
     (h_flow : IsPmadFlow ϕ ω κ ξ B)
-    (i j : N) (θ : N → ℝ) (c : N → ℂ) (h_B : 0 ≤ B)
+    (i j : N) (θ : N → ℝ) (c : N → ℂ)
     -- System parameters match the complex amplitude phases
     (h_amplitude_i : c i = exp (I * (θ i : ℂ)))
     (h_amplitude_j : c j = exp (I * (θ j : ℂ)))
@@ -463,7 +463,7 @@ omit [DecidableEq N] in
     by nesting the Fundamental Theorem of Calculus (FTC) -/
 
 theorem born_rule_noise_degradation_bound_derive_ftc_evolution
-    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B lambda_phys : ℝ) (h_B : 0 ≤ B)
+    (ϕ : Trajectory N) (ω : N → ℝ) (κ : N → N → ℝ) (ξ : ℝ → N → ℝ) (B lambda_phys : ℝ)
     (h_lambda_phys : lambda_phys ≤ 0)
     (h_flow : IsPmadFlow ϕ ω κ ξ B)
     (i j : N) (θ : N → ℝ) (c : N → ℂ)
@@ -698,7 +698,7 @@ theorem born_rule_noise_degradation_of_regime
     rw [reg.h_theta_sync n1 n2, sub_self] at h1
     exact sub_eq_zero.mp h1
   exact born_rule_noise_degradation_bound_derive_ftc_evolution
-    ϕ ω κ ξ B lambda_phys reg.h_B h_lambda_phys reg.h_flow i j θ c
+    ϕ ω κ ξ B lambda_phys h_lambda_phys reg.h_flow i j θ c
     (reg.h_amplitude i) (reg.h_amplitude j)
     (reg.h_omega i j) h_init_sync h_diss h_spec
     (fun t => pmad_flow_noise_diff_bound reg.h_flow t i j)
